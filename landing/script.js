@@ -2,6 +2,7 @@ const header = document.querySelector(".site-header");
 const year = document.querySelector("#year");
 const betaForm = document.querySelector("#beta-form");
 const betaFormStatus = document.querySelector("#beta-form-status");
+const phoneInput = document.querySelector("#phone");
 
 const syncHeader = () => {
   if (header) {
@@ -27,6 +28,31 @@ const setFormStatus = (message, tone = "neutral") => {
 
 const normalizeValue = (formData, key) => String(formData.get(key) ?? "").trim();
 
+const getPhoneDigits = (value) => {
+  const digits = String(value ?? "").replace(/\D/g, "");
+  const withoutCountryCode = digits.length > 10 && digits.startsWith("1") ? digits.slice(1) : digits;
+
+  return withoutCountryCode.slice(0, 10);
+};
+
+const formatPhoneNumber = (value) => {
+  const digits = getPhoneDigits(value);
+
+  if (digits.length <= 3) {
+    return digits ? `(${digits}` : "";
+  }
+
+  if (digits.length <= 6) {
+    return `(${digits.slice(0, 3)})${digits.slice(3)}`;
+  }
+
+  return `(${digits.slice(0, 3)})${digits.slice(3, 6)}-${digits.slice(6)}`;
+};
+
+phoneInput?.addEventListener("input", () => {
+  phoneInput.value = formatPhoneNumber(phoneInput.value);
+});
+
 betaForm?.addEventListener("submit", async (event) => {
   event.preventDefault();
 
@@ -46,12 +72,19 @@ betaForm?.addEventListener("submit", async (event) => {
     return;
   }
 
+  const formattedPhone = formatPhoneNumber(normalizeValue(formData, "phone"));
+  if (getPhoneDigits(formattedPhone).length !== 10) {
+    setFormStatus("Enter a 10-digit phone number.", "error");
+    phoneInput?.focus();
+    return;
+  }
+
   const submitButton = betaForm.querySelector("button[type='submit']");
   const payload = {
     first_name: normalizeValue(formData, "first_name"),
     last_name: normalizeValue(formData, "last_name"),
     email: normalizeValue(formData, "email").toLowerCase(),
-    phone: normalizeValue(formData, "phone"),
+    phone: formattedPhone,
     source: "landing_page",
   };
 
