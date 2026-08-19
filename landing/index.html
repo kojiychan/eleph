@@ -1,0 +1,188 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Eleph | Privacy-first bathroom activity monitoring</title>
+    <meta
+      name="description"
+      content="Eleph helps caregivers see simple bathroom activity signals without cameras, microphones, or constant check-ins."
+    />
+    <meta property="og:title" content="Eleph" />
+    <meta
+      property="og:description"
+      content="Privacy-first bathroom activity monitoring for calmer caregiver check-ins."
+    />
+    <meta property="og:image" content="/assets/eleph-hero.png" />
+    <meta name="theme-color" content="#f4efe6" />
+    <link rel="preload" href="/assets/eleph-hero.png" as="image" />
+    <link rel="stylesheet" href="/styles.css" />
+  </head>
+  <body>
+    <header class="site-header" aria-label="Main navigation">
+      <a class="brand" href="#top" aria-label="Eleph home">
+        <span class="brand-mark" aria-hidden="true">E</span>
+        <span>Eleph</span>
+      </a>
+      <nav class="nav-links" aria-label="Primary">
+        <a href="#signals">Signals</a>
+        <a href="#privacy">Privacy</a>
+        <a href="#beta">Beta</a>
+      </nav>
+      <a class="header-action" href="#beta">Join beta</a>
+    </header>
+
+    <main id="top">
+      <section class="hero" aria-labelledby="hero-title">
+        <img class="hero-image" src="/assets/eleph-hero.png" alt="" />
+        <div class="hero-shade" aria-hidden="true"></div>
+        <div class="hero-content">
+          <p class="eyebrow">Privacy-first motion monitoring</p>
+          <h1 id="hero-title">Eleph</h1>
+          <p class="hero-copy">
+            A calmer way for caregivers to know bathroom routines are moving as expected, without cameras,
+            microphones, or constant check-ins.
+          </p>
+          <div class="hero-actions" aria-label="Hero actions">
+            <a class="button primary" href="#beta">
+              <span>Join beta</span>
+              <span aria-hidden="true">→</span>
+            </a>
+            <a class="button secondary" href="#signals">See signals</a>
+          </div>
+        </div>
+      </section>
+
+      <section class="signal-band" id="signals" aria-labelledby="signals-title">
+        <div class="section-inner split">
+          <div>
+            <p class="eyebrow">Simple activity context</p>
+            <h2 id="signals-title">Know when a routine looks quiet.</h2>
+          </div>
+          <div class="signal-grid" aria-label="Eleph activity signals">
+            <article class="signal-card">
+              <span class="signal-icon" aria-hidden="true">
+                <svg viewBox="0 0 24 24" role="img">
+                  <path d="M4 12h4l3-7 4 14 3-7h2" />
+                </svg>
+              </span>
+              <h3>Motion moments</h3>
+              <p>Eleph records bathroom activity transitions from a discreet mmWave sensor.</p>
+            </article>
+            <article class="signal-card">
+              <span class="signal-icon" aria-hidden="true">
+                <svg viewBox="0 0 24 24" role="img">
+                  <path d="M12 7v5l3 2" />
+                  <circle cx="12" cy="12" r="8" />
+                </svg>
+              </span>
+              <h3>Quiet windows</h3>
+              <p>Caregivers can see when the expected rhythm has gone unusually still.</p>
+            </article>
+            <article class="signal-card">
+              <span class="signal-icon" aria-hidden="true">
+                <svg viewBox="0 0 24 24" role="img">
+                  <path d="M5 12l4 4L19 6" />
+                </svg>
+              </span>
+              <h3>Daily reassurance</h3>
+              <p>A companion app keeps the signal readable at a glance.</p>
+            </article>
+          </div>
+        </div>
+      </section>
+
+      <section class="privacy-band" id="privacy" aria-labelledby="privacy-title">
+        <div class="section-inner privacy-layout">
+          <div class="phone-panel" aria-label="Example Eleph app status">
+            <div class="phone">
+              <div class="phone-top"></div>
+              <div class="app-screen">
+                <div class="status-pill">Today looks steady</div>
+                <div class="timeline">
+                  <span></span>
+                  <span></span>
+                  <span class="warn"></span>
+                  <span></span>
+                </div>
+                <div class="metric-row">
+                  <strong>4</strong>
+                  <span>motion moments</span>
+                </div>
+                <div class="metric-row">
+                  <strong>2h</strong>
+                  <span>quiet window</span>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="privacy-copy">
+            <p class="eyebrow">Built for dignity</p>
+            <h2 id="privacy-title">No camera. No microphone. No guesswork about who someone is.</h2>
+            <p>
+              Eleph focuses on one narrow signal: motion activity from a bathroom sensor. It is designed as
+              reassurance for everyday care, not as fall detection, diagnosis, or surveillance.
+            </p>
+            <ul class="check-list">
+              <li>Camera-free presence sensing</li>
+              <li>Motion events only on activity transitions</li>
+              <li>Caregiver app prepared for private beta workflows</li>
+            </ul>
+          </div>
+        </div>
+      </section>
+
+      <section class="beta-band" id="beta" aria-labelledby="beta-title">
+        <div class="section-inner beta-layout">
+          <div>
+            <p class="eyebrow">Private beta</p>
+            <h2 id="beta-title">For families who want fewer anxious check-ins.</h2>
+          </div>
+          <form class="beta-form" id="beta-form">
+            <div class="field-grid">
+              <div class="field">
+                <label for="first-name">First name</label>
+                <input id="first-name" name="first_name" type="text" autocomplete="given-name" required />
+              </div>
+              <div class="field">
+                <label for="last-name">Last name</label>
+                <input id="last-name" name="last_name" type="text" autocomplete="family-name" required />
+              </div>
+              <div class="field">
+                <label for="email">Email</label>
+                <input id="email" name="email" type="email" autocomplete="email" required />
+              </div>
+              <div class="field">
+                <label for="phone">Phone number</label>
+                <input id="phone" name="phone" type="tel" autocomplete="tel" required />
+              </div>
+              <div class="field trap" aria-hidden="true">
+                <label for="company">Company</label>
+                <input id="company" name="company" type="text" tabindex="-1" autocomplete="off" />
+              </div>
+            </div>
+            <p class="form-note">
+              By requesting access, you agree to Eleph's <a href="/terms.html">Terms</a> and acknowledge the
+              <a href="/privacy.html">Privacy Policy</a>.
+            </p>
+            <div class="form-submit-row">
+              <button type="submit">Request access</button>
+              <p class="form-status" id="beta-form-status" role="status" aria-live="polite"></p>
+            </div>
+          </form>
+        </div>
+      </section>
+    </main>
+
+    <footer class="site-footer">
+      <span>© <span id="year">2026</span> Eleph</span>
+      <span class="footer-links">
+        <a href="/privacy.html">Privacy Policy</a>
+        <a href="/terms.html">Terms</a>
+      </span>
+    </footer>
+
+    <script src="/config.js"></script>
+    <script src="/script.js"></script>
+  </body>
+</html>
