@@ -1,16 +1,16 @@
 :root {
-  --ink: #17211d;
-  --muted: #5f6b64;
-  --paper: #fbf8f1;
-  --linen: #f1eadf;
-  --moss: #496b55;
-  --moss-dark: #274b37;
-  --gold: #d6a84f;
-  --clay: #b66b53;
-  --sky: #d9e7ea;
+  --ink: #112943;
+  --muted: #5d6d75;
+  --paper: #fbfaf6;
+  --linen: #e9f4f1;
+  --moss: #2a6f73;
+  --moss-dark: #112943;
+  --gold: #52d3b7;
+  --clay: #d58a64;
+  --sky: #d7f4ed;
   --white: #ffffff;
-  --line: rgba(23, 33, 29, 0.14);
-  --shadow: 0 18px 50px rgba(31, 42, 36, 0.18);
+  --line: rgba(17, 41, 67, 0.14);
+  --shadow: 0 18px 50px rgba(17, 41, 67, 0.18);
   font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   color: var(--ink);
   background: var(--paper);
@@ -72,40 +72,11 @@ a {
 }
 
 .brand-logo {
-  width: 50px;
-  height: 38px;
+  width: 42px;
+  height: 42px;
   flex: 0 0 auto;
-  overflow: visible;
-}
-
-.logo-elephant {
-  fill: currentColor;
-}
-
-.logo-smile {
-  fill: none;
-  stroke: var(--paper);
-  stroke-linecap: round;
-  stroke-width: 4.2;
-}
-
-.logo-eye {
-  fill: var(--paper);
-}
-
-.logo-signal {
-  fill: none;
-  stroke: var(--gold);
-  stroke-linecap: round;
-  stroke-width: 6.2;
-}
-
-.site-header:not(.is-scrolled) .logo-smile {
-  stroke: rgba(23, 33, 29, 0.86);
-}
-
-.site-header:not(.is-scrolled) .logo-eye {
-  fill: rgba(23, 33, 29, 0.86);
+  border-radius: 12px;
+  box-shadow: 0 8px 20px rgba(17, 41, 67, 0.18);
 }
 
 .nav-links {
@@ -147,8 +118,8 @@ a {
 
 .hero-shade {
   background:
-    linear-gradient(90deg, rgba(18, 26, 22, 0.82), rgba(18, 26, 22, 0.42) 42%, rgba(18, 26, 22, 0.08) 72%),
-    linear-gradient(0deg, rgba(18, 26, 22, 0.34), rgba(18, 26, 22, 0) 35%);
+    linear-gradient(90deg, rgba(17, 41, 67, 0.86), rgba(17, 41, 67, 0.48) 42%, rgba(17, 41, 67, 0.1) 72%),
+    linear-gradient(0deg, rgba(17, 41, 67, 0.36), rgba(17, 41, 67, 0) 35%);
 }
 
 .hero-content {
@@ -222,8 +193,8 @@ h3 {
 
 .button.primary,
 .beta-form button {
-  color: var(--white);
-  background: var(--moss-dark);
+  color: var(--ink);
+  background: var(--gold);
 }
 
 .button.secondary {
@@ -330,7 +301,7 @@ h3 {
   padding: 24px;
   border-radius: 28px;
   background:
-    linear-gradient(180deg, rgba(217, 231, 234, 0.68), rgba(255, 255, 255, 0) 34%),
+    linear-gradient(180deg, rgba(215, 244, 237, 0.78), rgba(255, 255, 255, 0) 34%),
     #ffffff;
 }
 
@@ -356,15 +327,15 @@ h3 {
   display: block;
   height: 16px;
   border-radius: 999px;
-  background: linear-gradient(90deg, var(--moss) 0 58%, rgba(73, 107, 85, 0.12) 58% 100%);
+  background: linear-gradient(90deg, var(--moss) 0 58%, rgba(42, 111, 115, 0.12) 58% 100%);
 }
 
 .timeline span:nth-child(2) {
-  background: linear-gradient(90deg, var(--moss) 0 34%, rgba(73, 107, 85, 0.12) 34% 100%);
+  background: linear-gradient(90deg, var(--moss) 0 34%, rgba(42, 111, 115, 0.12) 34% 100%);
 }
 
 .timeline span.warn {
-  background: linear-gradient(90deg, var(--gold) 0 70%, rgba(214, 168, 79, 0.16) 70% 100%);
+  background: linear-gradient(90deg, var(--gold) 0 70%, rgba(82, 211, 183, 0.16) 70% 100%);
 }
 
 .metric-row {
@@ -461,7 +432,7 @@ h3 {
 }
 
 .beta-form input:focus {
-  outline: 2px solid rgba(214, 168, 79, 0.8);
+  outline: 2px solid rgba(82, 211, 183, 0.8);
   outline-offset: 2px;
 }
 
@@ -630,7 +601,7 @@ h3 {
   }
 
   .hero-shade {
-    background: linear-gradient(90deg, rgba(18, 26, 22, 0.86), rgba(18, 26, 22, 0.42));
+    background: linear-gradient(90deg, rgba(17, 41, 67, 0.88), rgba(17, 41, 67, 0.46));
   }
 
   .split,
