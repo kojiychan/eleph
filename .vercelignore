@@ -1,0 +1,16 @@
+.agents/
+.codex/
+.venv/
+__pycache__/
+*.py[cod]
+
+ios/
+src/
+supabase/
+systemd/
+tests/
+
+.env
+.env.*
+!.env.example
+pyproject.toml
