@@ -2,6 +2,7 @@ import SwiftUI
 
 struct OnboardingView: View {
     @StateObject var viewModel: OnboardingViewModel
+    @FocusState private var focusedField: OnboardingField?
     let onComplete: () -> Void
 
     var body: some View {
@@ -60,7 +61,7 @@ struct OnboardingView: View {
     private var welcome: some View {
         VStack(alignment: .leading, spacing: 18) {
             onboardingHero(symbol: "heart.text.square.fill", title: "Welcome to Eleph", subtitle: "Privacy-preserving bathroom motion monitoring for caregivers.")
-            Text("Eleph tracks motion activity, not video or audio, so you can see when it may be time to check in.")
+            Text("For this TestFlight beta, your account will be linked to the bathroom monitor that is already online.")
                 .font(.body)
                 .foregroundStyle(.secondary)
 
@@ -89,13 +90,32 @@ struct OnboardingView: View {
     private var login: some View {
         VStack(alignment: .leading, spacing: 18) {
             onboardingHero(symbol: "person.crop.circle.fill", title: "Sign in", subtitle: "Use your Eleph account to access a monitor that has already been set up.")
-            TextField("Email", text: $viewModel.loginEmail)
+            TextField("email@example.com", text: $viewModel.loginEmail)
                 .textContentType(.username)
-            SecureField("Password", text: $viewModel.loginPassword)
-                .textContentType(.password)
-            Text("For this beta, sign-in is prepared for the account system and will continue to the dashboard.")
-                .font(.footnote)
-                .foregroundStyle(.secondary)
+                .emailInputTraits()
+                .focused($focusedField, equals: .loginEmail)
+                .submitLabel(.next)
+                .onSubmit { focusedField = .loginPassword }
+            passwordField(
+                title: "Password",
+                text: $viewModel.loginPassword,
+                isVisible: $viewModel.showsLoginPassword,
+                isNewPassword: false
+            )
+            .focused($focusedField, equals: .loginPassword)
+            .submitLabel(.go)
+            .onSubmit {
+                Task {
+                    if await viewModel.signInExistingUser() {
+                        onComplete()
+                    }
+                }
+            }
+            if let message = viewModel.errorMessage {
+                Label(message, systemImage: "exclamationmark.triangle.fill")
+                    .font(.footnote)
+                    .foregroundStyle(.orange)
+            }
         }
         .textFieldStyle(.roundedBorder)
     }
@@ -143,7 +163,7 @@ struct OnboardingView: View {
 
     private var bluetooth: some View {
         VStack(alignment: .leading, spacing: 18) {
-            onboardingHero(symbol: "dot.radiowaves.left.and.right", title: "Bluetooth setup", subtitle: "Bluetooth setup will help connect nearby monitors in a later beta.")
+            onboardingHero(symbol: "dot.radiowaves.left.and.right", title: "Find Monitor", subtitle: "The app will look for a nearby monitor and connect it to this setup.")
             provisioningCard(state: viewModel.bluetoothState, device: viewModel.discoveredDevice)
             Button {
                 Task { await viewModel.discoverBluetooth() }
@@ -152,7 +172,7 @@ struct OnboardingView: View {
                     .frame(maxWidth: .infinity)
             }
             .buttonStyle(.borderedProminent)
-            Text("The app will use the monitor found over Bluetooth to connect to the right motion history.")
+            Text("The monitor identity is saved quietly after connection so the dashboard loads the right motion history.")
             .font(.subheadline)
             .foregroundStyle(.secondary)
         }
@@ -180,7 +200,7 @@ struct OnboardingView: View {
                     .frame(maxWidth: .infinity)
             }
             .buttonStyle(.borderedProminent)
-            Text("Reconnect setup will be enabled in a later beta.")
+            Text("You can continue without changing Wi-Fi for this beta.")
                 .font(.footnote)
                 .foregroundStyle(.secondary)
         }
@@ -190,18 +210,60 @@ struct OnboardingView: View {
     private var account: some View {
         VStack(alignment: .leading, spacing: 18) {
             onboardingHero(symbol: "person.crop.circle.badge.checkmark", title: "Create your account", subtitle: "Your account saves this monitor setup and will let you receive alerts and sign in from another device.")
-            TextField("Your name", text: $viewModel.caregiverName)
-                .textContentType(.name)
-            TextField("Email", text: $viewModel.accountEmail)
+            TextField("First name", text: $viewModel.caregiverFirstName)
+                .textContentType(.givenName)
+                .focused($focusedField, equals: .firstName)
+                .submitLabel(.next)
+                .onSubmit { focusedField = .lastName }
+            TextField("Last name", text: $viewModel.caregiverLastName)
+                .textContentType(.familyName)
+                .focused($focusedField, equals: .lastName)
+                .submitLabel(.next)
+                .onSubmit { focusedField = .accountEmail }
+            TextField("email@example.com", text: $viewModel.accountEmail)
                 .textContentType(.emailAddress)
+                .emailInputTraits()
+                .focused($focusedField, equals: .accountEmail)
+                .submitLabel(.next)
+                .onSubmit { focusedField = .accountPhone }
             TextField("Phone number", text: $viewModel.accountPhone)
                 .textContentType(.telephoneNumber)
-            SecureField("Password", text: $viewModel.accountPassword)
-                .textContentType(.newPassword)
-            SecureField("Confirm password", text: $viewModel.accountConfirmPassword)
-                .textContentType(.newPassword)
+                .phoneInputTraits()
+                .focused($focusedField, equals: .accountPhone)
+                .submitLabel(.next)
+                .onSubmit { focusedField = .accountPassword }
+            passwordField(
+                title: "Password",
+                text: $viewModel.accountPassword,
+                isVisible: $viewModel.showsAccountPassword,
+                isNewPassword: true
+            )
+            .focused($focusedField, equals: .accountPassword)
+            .submitLabel(.next)
+            .onSubmit { focusedField = .accountConfirmPassword }
+            passwordField(
+                title: "Confirm password",
+                text: $viewModel.accountConfirmPassword,
+                isVisible: $viewModel.showsAccountConfirmPassword,
+                isNewPassword: true
+            )
+            .focused($focusedField, equals: .accountConfirmPassword)
+            .submitLabel(.go)
+            .onSubmit {
+                Task {
+                    if await viewModel.createAccount() {
+                        viewModel.advance()
+                    }
+                }
+            }
 
-            if let message = viewModel.accountValidationMessage {
+            if focusedField == .accountPassword || focusedField == .accountConfirmPassword || !viewModel.accountPassword.isEmpty {
+                Label("Use at least 8 characters.", systemImage: viewModel.accountPassword.count >= 8 ? "checkmark.circle.fill" : "info.circle")
+                    .font(.footnote)
+                    .foregroundStyle(viewModel.accountPassword.count >= 8 ? .green : .secondary)
+            }
+
+            if let message = viewModel.accountValidationMessage ?? viewModel.errorMessage {
                 Label(message, systemImage: "exclamationmark.triangle.fill")
                     .font(.footnote)
                     .foregroundStyle(.orange)
@@ -243,8 +305,39 @@ struct OnboardingView: View {
 
             TextField("Monitor name", text: $viewModel.monitorName)
             TextField("Room name", text: $viewModel.roomName)
+
+            Label("\(viewModel.monitorName) - \(viewModel.roomName)", systemImage: "checkmark.circle.fill")
+                .font(.subheadline.weight(.semibold))
+                .foregroundStyle(.secondary)
         }
         .textFieldStyle(.roundedBorder)
+    }
+
+    private func passwordField(
+        title: String,
+        text: Binding<String>,
+        isVisible: Binding<Bool>,
+        isNewPassword: Bool
+    ) -> some View {
+        HStack {
+            Group {
+                if isVisible.wrappedValue {
+                    TextField(title, text: text)
+                } else {
+                    SecureField(title, text: text)
+                }
+            }
+            .textContentType(isNewPassword ? .newPassword : .password)
+
+            Button {
+                isVisible.wrappedValue.toggle()
+            } label: {
+                Image(systemName: isVisible.wrappedValue ? "eye.slash.fill" : "eye.fill")
+                    .foregroundStyle(.secondary)
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel(isVisible.wrappedValue ? "Hide password" : "Show password")
+        }
     }
 
     private var customPersonField: some View {
@@ -316,7 +409,7 @@ struct OnboardingView: View {
         VStack(alignment: .leading, spacing: 18) {
             onboardingHero(symbol: "checkmark.seal.fill", title: "Setup complete", subtitle: "Your bathroom monitor is ready for the dashboard.")
             checklist([
-                "Monitor connected over Bluetooth",
+                "Beta monitor assigned",
                 "Motion history connected",
                 "Alert timing configured",
                 "Notification preferences saved",
@@ -336,9 +429,17 @@ struct OnboardingView: View {
             Spacer()
 
             if viewModel.step != .welcome {
-                Button(primaryButtonTitle) {
+                Button {
                     Task {
                         await primaryAction()
+                    }
+                } label: {
+                    HStack(spacing: 8) {
+                        if viewModel.isSubmitting {
+                            ProgressView()
+                                .controlSize(.small)
+                        }
+                        Text(primaryButtonTitle)
                     }
                 }
                 .buttonStyle(.borderedProminent)
@@ -355,14 +456,15 @@ struct OnboardingView: View {
             || (viewModel.step == .account && !viewModel.isAccountValid)
             || (viewModel.step == .login && !viewModel.isLoginValid)
             || (viewModel.step == .placement && !viewModel.isPlacementComplete)
+            || viewModel.isSubmitting
     }
 
     private var primaryButtonTitle: String {
         switch viewModel.step {
         case .welcome: ""
-        case .login: "Sign In"
+        case .login: viewModel.isSubmitting ? "Signing In" : "Sign In"
         case .placement: "I've Placed It"
-        case .account: "Create Account"
+        case .account: viewModel.isSubmitting ? "Creating Account" : "Create Account"
         case .complete: "Go to Dashboard"
         default: "Continue"
         }
@@ -373,14 +475,16 @@ struct OnboardingView: View {
         case .welcome:
             break
         case .login:
-            await viewModel.signInExistingUser()
-            onComplete()
+            if await viewModel.signInExistingUser() {
+                onComplete()
+            }
         case .naming:
             await viewModel.saveDeviceIdentity()
             viewModel.advance()
         case .account:
-            await viewModel.createAccount()
-            viewModel.advance()
+            if await viewModel.createAccount() {
+                viewModel.advance()
+            }
         case .complete:
             await viewModel.saveDeviceIdentity()
             onComplete()
@@ -445,4 +549,38 @@ struct OnboardingView: View {
         viewModel: OnboardingViewModel(services: AppServiceContainer.mock(scenario: .onboardingIncomplete)),
         onComplete: {}
     )
+}
+
+private extension View {
+    @ViewBuilder
+    func emailInputTraits() -> some View {
+        #if os(iOS)
+        self
+            .keyboardType(.emailAddress)
+            .textInputAutocapitalization(.never)
+            .autocorrectionDisabled()
+        #else
+        self
+        #endif
+    }
+
+    @ViewBuilder
+    func phoneInputTraits() -> some View {
+        #if os(iOS)
+        self.keyboardType(.phonePad)
+        #else
+        self
+        #endif
+    }
+}
+
+private enum OnboardingField: Hashable {
+    case loginEmail
+    case loginPassword
+    case firstName
+    case lastName
+    case accountEmail
+    case accountPhone
+    case accountPassword
+    case accountConfirmPassword
 }

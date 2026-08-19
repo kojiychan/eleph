@@ -3,8 +3,13 @@ import Foundation
 @MainActor
 final class HomeViewModel: ObservableObject {
     @Published private(set) var state: LoadableState<AppSnapshot> = .idle
+    @Published private(set) var lastUpdatedAt: Date?
 
     private let services: AppServiceContainer
+
+    var isUsingMockData: Bool {
+        services.isUsingMockData
+    }
 
     init(services: AppServiceContainer) {
         self.services = services
@@ -25,16 +30,17 @@ final class HomeViewModel: ObservableObject {
                 device: device,
                 alertPreferences: try await preferences,
                 nighttimeSchedule: .defaults,
-                profile: UserProfile(caregiverName: "Koji", email: "koji@example.com"),
+                profile: UserProfile(firstName: "Koji", lastName: "", caregiverName: "Koji", email: "koji@example.com", phone: "555-0100"),
                 contacts: [],
                 motionEvents: try await events,
                 alertEvents: try await alerts,
                 summaries: try await summaries,
                 trends: try await trends
             )
+            lastUpdatedAt = Date()
             state = .loaded(snapshot)
         } catch {
-            state = .failed(error.localizedDescription)
+            state = .failed(Formatters.friendlyError(error.localizedDescription))
         }
     }
 
@@ -54,5 +60,19 @@ final class HomeViewModel: ObservableObject {
     func inactivitySinceLastMotion(_ device: MonitorDevice) -> TimeInterval {
         guard let lastMotionAt = device.lastMotionAt else { return 0 }
         return Date().timeIntervalSince(lastMotionAt)
+    }
+
+    func plainStatus(for snapshot: AppSnapshot) -> String {
+        guard snapshot.device.connectionStatus == .online else {
+            return "Monitor offline"
+        }
+        guard let lastMotionAt = snapshot.device.lastMotionAt else {
+            return "No motion recorded yet"
+        }
+        let inactivity = Date().timeIntervalSince(lastMotionAt)
+        if inactivity < 5 * 60 {
+            return "Motion detected just now"
+        }
+        return "No motion for \(Formatters.duration(inactivity))"
     }
 }

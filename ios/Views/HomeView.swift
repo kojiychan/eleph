@@ -51,11 +51,28 @@ struct HomeView: View {
             .frame(maxWidth: .infinity, alignment: .leading)
             .padding(.top, 12)
 
-            if isOffline {
-                DeviceConnectionBanner(device: snapshot.device)
-            } else {
-                DeviceConnectionBanner(device: snapshot.device)
+            HStack(alignment: .firstTextBaseline) {
+                Text(viewModel.plainStatus(for: snapshot))
+                    .font(.title3.weight(.semibold))
+                    .foregroundStyle(isOffline ? .orange : .primary)
+                Spacer()
+                if viewModel.isUsingMockData {
+                    Label("Demo data", systemImage: "wand.and.stars")
+                        .font(.caption.weight(.semibold))
+                        .foregroundStyle(.secondary)
+                        .padding(.horizontal, 10)
+                        .padding(.vertical, 6)
+                        .background(AppColors.secondaryGroupedBackground, in: Capsule())
+                }
             }
+
+            if let lastUpdatedAt = viewModel.lastUpdatedAt {
+                Text("Last updated \(Formatters.relative(lastUpdatedAt))")
+                    .font(.footnote)
+                    .foregroundStyle(.secondary)
+            }
+
+            DeviceConnectionBanner(device: snapshot.device)
 
             StatusCard(
                 state: viewModel.wellnessState(for: snapshot),
@@ -101,7 +118,7 @@ struct HomeView: View {
             }
 
             if events.isEmpty {
-                EmptyStateView(title: "No Activity Yet", message: "Motion events will appear here after setup.", systemImage: "clock.badge.questionmark")
+                EmptyStateView(title: "No motion recorded yet today", message: "Activity updates will appear here when the monitor detects motion.", systemImage: "clock.badge.questionmark")
                     .frame(minHeight: 170)
             } else {
                 VStack(spacing: 0) {

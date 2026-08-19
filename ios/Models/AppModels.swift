@@ -140,8 +140,48 @@ struct NighttimeSchedule: Codable, Hashable {
 }
 
 struct UserProfile: Codable, Hashable {
+    var firstName: String
+    var lastName: String
     var caregiverName: String
     var email: String
+    var phone: String
+}
+
+struct AccountRegistration: Codable, Hashable {
+    var firstName: String
+    var lastName: String
+    var email: String
+    var phone: String
+    var password: String
+    var deviceID: String
+    var monitoredPersonName: String
+    var relationship: String?
+    var monitorName: String
+    var roomName: String
+    var alertPreferences: AlertPreferences
+    var notificationPreferences: AlertPreferences
+    var nighttimeSchedule: NighttimeSchedule
+
+    var displayName: String {
+        [firstName, lastName]
+            .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
+            .filter { !$0.isEmpty }
+            .joined(separator: " ")
+    }
+}
+
+struct AccountProfile: Codable, Hashable {
+    var firstName: String
+    var lastName: String
+    var email: String
+    var phone: String
+
+    var displayName: String {
+        [firstName, lastName]
+            .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
+            .filter { !$0.isEmpty }
+            .joined(separator: " ")
+    }
 }
 
 struct CaregiverContact: Identifiable, Codable, Hashable {

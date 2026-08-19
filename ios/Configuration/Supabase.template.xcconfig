@@ -1,3 +1,7 @@
 SUPABASE_URL = https:/$()/your-project-ref.supabase.co
 SUPABASE_ANON_KEY = your-public-anon-key
 ELEPH_DEVICE_ID = bathroom-monitor-001
+ELEPH_PRIVACY_POLICY_URL =
+ELEPH_TERMS_URL =
+ELEPH_SUPPORT_URL = mailto:kojiychan@gmail.com
+ELEPH_DATA_DELETION_URL = mailto:kojiychan@gmail.com?subject=Eleph%20Account%20and%20Data%20Deletion%20Request

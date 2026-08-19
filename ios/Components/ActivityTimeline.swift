@@ -18,9 +18,9 @@ struct ActivityTimeline: View {
                     .frame(width: 16)
 
                     VStack(alignment: .leading, spacing: 4) {
-                        Text("\(Formatters.exactTime(item.date)) — \(item.title)")
+                        Text(item.title)
                             .font(.body.weight(.medium))
-                        Text(item.detail)
+                        Text("\(Formatters.exactTime(item.date)) - \(item.detail)")
                             .font(.footnote)
                             .foregroundStyle(.secondary)
                     }

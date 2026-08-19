@@ -17,20 +17,33 @@ final class OnboardingViewModel: ObservableObject {
     @Published var alertPreferences = AlertPreferences.defaults
     @Published var nighttimeSchedule = NighttimeSchedule.defaults
     @Published var notifications = AlertPreferences.defaults
-    @Published var caregiverName = "Koji"
+    @Published var caregiverFirstName = ""
+    @Published var caregiverLastName = ""
     @Published var accountEmail = ""
-    @Published var accountPhone = ""
+    @Published var accountPhone = "" {
+        didSet {
+            let formatted = Self.formatPhoneNumber(accountPhone)
+            if accountPhone != formatted {
+                accountPhone = formatted
+            }
+        }
+    }
     @Published var accountPassword = ""
     @Published var accountConfirmPassword = ""
     @Published var loginEmail = ""
     @Published var loginPassword = ""
     @Published var completedPlacementItems: Set<PlacementChecklistItem> = []
+    @Published var isSubmitting = false
+    @Published var showsAccountPassword = false
+    @Published var showsAccountConfirmPassword = false
+    @Published var showsLoginPassword = false
     @Published var errorMessage: String?
 
     private let services: AppServiceContainer
 
     init(services: AppServiceContainer) {
         self.services = services
+        configureBetaMonitor()
     }
 
     var totalSteps: Int {
@@ -48,7 +61,8 @@ final class OnboardingViewModel: ObservableObject {
     }
 
     var isAccountValid: Bool {
-        !caregiverName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+        !caregiverFirstName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+            && !caregiverLastName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
             && accountEmail.contains("@")
             && !accountPhone.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
             && accountPassword.count >= 8
@@ -64,14 +78,20 @@ final class OnboardingViewModel: ObservableObject {
     }
 
     var accountValidationMessage: String? {
-        if caregiverName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
-            return "Enter your name."
+        if caregiverFirstName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+            return "Enter your first name."
+        }
+        if caregiverLastName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+            return "Enter your last name."
         }
         if !accountEmail.contains("@") {
             return "Enter a valid email."
         }
         if accountPhone.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
             return "Enter a phone number."
+        }
+        if Self.phoneDigits(accountPhone).count != 10 {
+            return "Enter a 10-digit phone number."
         }
         if accountPassword.count < 8 {
             return "Password must be at least 8 characters."
@@ -83,15 +103,19 @@ final class OnboardingViewModel: ObservableObject {
     }
 
     func advance() {
+        errorMessage = nil
         guard let next = step.next else { return }
         step = next
     }
 
     func startNewSetup() {
-        step = .placement
+        errorMessage = nil
+        configureBetaMonitor()
+        step = .naming
     }
 
     func startExistingUserLogin() {
+        errorMessage = nil
         step = .login
     }
 
@@ -127,6 +151,7 @@ final class OnboardingViewModel: ObservableObject {
             completedPlacementItems.remove(item)
         } else {
             completedPlacementItems.insert(item)
+            Haptics.success()
         }
     }
 
@@ -176,26 +201,36 @@ final class OnboardingViewModel: ObservableObject {
         }
     }
 
-    func signInExistingUser() async {
-        guard isLoginValid else { return }
+    func signInExistingUser() async -> Bool {
+        guard isLoginValid else { return false }
         do {
-            try await services.authenticationService.continueWithEmail(loginEmail)
+            isSubmitting = true
+            defer { isSubmitting = false }
+            errorMessage = nil
+            try await services.authenticationService.signIn(email: loginEmail, password: loginPassword)
+            return true
         } catch {
-            errorMessage = error.localizedDescription
+            errorMessage = Formatters.friendlyError(error.localizedDescription)
+            return false
         }
     }
 
-    func createAccount() async {
-        guard isAccountValid else { return }
+    func createAccount() async -> Bool {
+        guard isAccountValid else { return false }
         do {
-            try await services.authenticationService.continueWithEmail(accountEmail)
+            isSubmitting = true
+            defer { isSubmitting = false }
+            errorMessage = nil
+            try await services.authenticationService.createAccount(accountRegistration)
+            return true
         } catch {
-            errorMessage = error.localizedDescription
+            errorMessage = Formatters.friendlyError(error.localizedDescription)
+            return false
         }
     }
 
     func saveDeviceIdentity() async {
-        var device = discoveredDevice ?? MockData.stableDevice()
+        var device = discoveredDevice ?? MockData.stableDevice(id: currentMonitorDeviceID)
         device.displayName = monitorName
         device.monitoredPersonName = personName
         device.roomName = roomName
@@ -212,13 +247,67 @@ final class OnboardingViewModel: ObservableObject {
     func runMotionTest() async {
         motionTestState = .waiting
         do {
-            let deviceID = discoveredDevice?.id ?? "bathroom-monitor-001"
+            let deviceID = currentMonitorDeviceID
             let success = try await services.bluetoothService.waitForMotionTest(deviceID: deviceID)
             motionTestState = success ? .success : .retry
         } catch {
             motionTestState = .retry
             errorMessage = error.localizedDescription
         }
+    }
+
+    private var accountRegistration: AccountRegistration {
+        AccountRegistration(
+            firstName: caregiverFirstName.trimmingCharacters(in: .whitespacesAndNewlines),
+            lastName: caregiverLastName.trimmingCharacters(in: .whitespacesAndNewlines),
+            email: accountEmail.trimmingCharacters(in: .whitespacesAndNewlines),
+            phone: Self.phoneDigits(accountPhone),
+            password: accountPassword,
+            deviceID: currentMonitorDeviceID,
+            monitoredPersonName: personName,
+            relationship: selectedPersonOption == .custom ? nil : selectedPersonOption.title.lowercased(),
+            monitorName: monitorName,
+            roomName: roomName,
+            alertPreferences: alertPreferences,
+            notificationPreferences: notifications,
+            nighttimeSchedule: nighttimeSchedule
+        )
+    }
+
+    private var currentMonitorDeviceID: String {
+        discoveredDevice?.id ?? services.identityStore.loadDeviceID() ?? services.betaMonitorDeviceID
+    }
+
+    private func configureBetaMonitor() {
+        let deviceID = services.betaMonitorDeviceID
+        services.identityStore.saveDeviceID(deviceID)
+        if discoveredDevice == nil {
+            discoveredDevice = MockData.stableDevice(id: deviceID)
+        }
+    }
+
+    private static func phoneDigits(_ value: String) -> String {
+        value.filter(\.isNumber)
+    }
+
+    private static func formatPhoneNumber(_ value: String) -> String {
+        let digits = String(phoneDigits(value).prefix(10))
+        var output = ""
+
+        for (index, character) in digits.enumerated() {
+            if index == 0 {
+                output.append("(")
+            }
+            if index == 3 {
+                output.append(") ")
+            }
+            if index == 6 {
+                output.append("-")
+            }
+            output.append(character)
+        }
+
+        return output
     }
 }
 
@@ -241,19 +330,15 @@ enum OnboardingStep: Int, CaseIterable, Identifiable {
         switch self {
         case .welcome, .login, .complete:
             nil
-        case .placement:
-            .bluetooth
-        case .bluetooth:
+        case .placement, .bluetooth:
             .wifi
-        case .wifi:
-            .naming
+        case .wifi, .motionTest:
+            .account
         case .naming:
             .alerts
         case .alerts:
             .notifications
         case .notifications:
-            .motionTest
-        case .motionTest:
             .account
         case .account:
             .complete
@@ -264,14 +349,14 @@ enum OnboardingStep: Int, CaseIterable, Identifiable {
         switch self {
         case .welcome:
             nil
-        case .login, .placement:
+        case .login, .naming:
+            .welcome
+        case .placement:
             .welcome
         case .bluetooth:
             .placement
         case .wifi:
             .bluetooth
-        case .naming:
-            .wifi
         case .alerts:
             .naming
         case .notifications:
@@ -279,7 +364,7 @@ enum OnboardingStep: Int, CaseIterable, Identifiable {
         case .motionTest:
             .notifications
         case .account:
-            .motionTest
+            .notifications
         case .complete:
             .account
         }
@@ -292,13 +377,9 @@ enum OnboardingStep: Int, CaseIterable, Identifiable {
 
         return [
             .welcome,
-            .placement,
-            .bluetooth,
-            .wifi,
             .naming,
             .alerts,
             .notifications,
-            .motionTest,
             .account,
             .complete
         ]

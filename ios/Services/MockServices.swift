@@ -94,6 +94,14 @@ struct MockAuthenticationService: AuthenticationService {
     func signInWithApple() async throws { try await Task.sleep(for: .milliseconds(400)) }
     func signInWithGoogle() async throws { try await Task.sleep(for: .milliseconds(400)) }
     func continueWithEmail(_ email: String) async throws { try await Task.sleep(for: .milliseconds(400)) }
+    func signIn(email: String, password: String) async throws { try await Task.sleep(for: .milliseconds(400)) }
+    func createAccount(_ registration: AccountRegistration) async throws { try await Task.sleep(for: .milliseconds(500)) }
+    func handleAuthCallback(_ url: URL) async throws { try await Task.sleep(for: .milliseconds(200)) }
+    func loadProfile() async throws -> AccountProfile {
+        AccountProfile(firstName: "Koji", lastName: "", email: "koji@example.com", phone: "(555) 010-0000")
+    }
+    func saveProfile(_ profile: AccountProfile) async throws { try await Task.sleep(for: .milliseconds(300)) }
+    func hasActiveSession() async -> Bool { true }
     func signOut() async throws { try await Task.sleep(for: .milliseconds(200)) }
 }
 

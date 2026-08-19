@@ -21,7 +21,7 @@ actor SupabaseAppRepository: DeviceRepository, MotionEventRepository, AlertRepos
     }
 
     func fetchDevice() async throws -> MonitorDevice {
-        let deviceID = identityStore.loadDeviceID() ?? fallbackDeviceID
+        let deviceID = try await resolvedDeviceID()
 
         do {
             let rows: [SupabaseDeviceRow] = try await client
@@ -99,14 +99,84 @@ actor SupabaseAppRepository: DeviceRepository, MotionEventRepository, AlertRepos
     }
 
     func fetchPreferences() async throws -> AlertPreferences {
-        preferencesStore.load()
+        let deviceID = try await resolvedDeviceID()
+        do {
+            let rows: [SupabaseDeviceSettingsRow] = try await client
+                .from("device_settings")
+                .select()
+                .eq("device_id", value: deviceID)
+                .limit(1)
+                .execute()
+                .value
+
+            if let row = rows.first {
+                let preferences = row.toAlertPreferences()
+                preferencesStore.save(preferences)
+                return preferences
+            }
+        } catch {
+            // Local preferences keep the app usable while account-linked settings are being created.
+        }
+
+        return preferencesStore.load()
     }
 
     func savePreferences(_ preferences: AlertPreferences) async throws {
         guard preferences.isValid else {
             throw AppServiceError.validation("Critical alert must be later than caution alert.")
         }
+
+        do {
+            let session = try await client.auth.session
+            let deviceID = try await resolvedDeviceID()
+            try await client
+                .from("device_settings")
+                .upsert(
+                    AlertPreferencesMutation(
+                        userID: session.user.id,
+                        deviceID: deviceID,
+                        cautionInactivityMinutes: preferences.cautionThresholdHours * 60,
+                        criticalInactivityMinutes: preferences.criticalThresholdHours * 60,
+                        cautionAlertsEnabled: preferences.cautionAlertsEnabled,
+                        criticalAlertsEnabled: preferences.criticalAlertsEnabled,
+                        pushNotificationsEnabled: preferences.cautionAlertsEnabled || preferences.criticalAlertsEnabled,
+                        disconnectedAlertsEnabled: preferences.disconnectedAlertsEnabled,
+                        reconnectedAlertsEnabled: preferences.reconnectedAlertsEnabled
+                    ),
+                    onConflict: "user_id,device_id",
+                    returning: .minimal
+                )
+                .execute()
+        } catch {
+            // Keep local settings responsive even if the beta backend is temporarily unavailable.
+        }
+
         preferencesStore.save(preferences)
+    }
+
+    private func resolvedDeviceID() async throws -> String {
+        if let storedDeviceID = identityStore.loadDeviceID() {
+            return storedDeviceID
+        }
+
+        do {
+            let rows: [SupabaseUserDeviceRow] = try await client
+                .from("user_devices")
+                .select("device_id")
+                .limit(1)
+                .execute()
+                .value
+
+            if let linkedDeviceID = rows.first?.deviceID {
+                identityStore.saveDeviceID(linkedDeviceID)
+                return linkedDeviceID
+            }
+        } catch {
+            // Keep beta builds usable while authenticated ownership is being rolled out.
+        }
+
+        identityStore.saveDeviceID(fallbackDeviceID)
+        return fallbackDeviceID
     }
 
     private static func summary(for date: Date, events: [MotionEvent]) -> DailyActivitySummary {
@@ -150,6 +220,73 @@ private struct SupabaseMotionEventRow: Decodable {
 
     func toMotionEvent() -> MotionEvent {
         MotionEvent(id: id, deviceID: deviceID, detectedAt: detectedAt)
+    }
+}
+
+private struct SupabaseUserDeviceRow: Decodable {
+    let deviceID: String
+
+    enum CodingKeys: String, CodingKey {
+        case deviceID = "device_id"
+    }
+}
+
+private struct SupabaseDeviceSettingsRow: Decodable {
+    let cautionInactivityMinutes: Int?
+    let criticalInactivityMinutes: Int?
+    let cautionAlertsEnabled: Bool?
+    let criticalAlertsEnabled: Bool?
+    let pushNotificationsEnabled: Bool?
+    let disconnectedAlertsEnabled: Bool?
+    let reconnectedAlertsEnabled: Bool?
+
+    enum CodingKeys: String, CodingKey {
+        case cautionInactivityMinutes = "caution_inactivity_minutes"
+        case criticalInactivityMinutes = "critical_inactivity_minutes"
+        case cautionAlertsEnabled = "caution_alerts_enabled"
+        case criticalAlertsEnabled = "critical_alerts_enabled"
+        case pushNotificationsEnabled = "push_notifications_enabled"
+        case disconnectedAlertsEnabled = "disconnected_alerts_enabled"
+        case reconnectedAlertsEnabled = "reconnected_alerts_enabled"
+    }
+
+    func toAlertPreferences() -> AlertPreferences {
+        let defaults = AlertPreferences.defaults
+        let cautionHours = max((cautionInactivityMinutes ?? defaults.cautionThresholdHours * 60) / 60, 1)
+        let criticalHours = max((criticalInactivityMinutes ?? defaults.criticalThresholdHours * 60) / 60, cautionHours + 1)
+
+        return AlertPreferences(
+            cautionThresholdHours: cautionHours,
+            criticalThresholdHours: criticalHours,
+            cautionAlertsEnabled: cautionAlertsEnabled ?? pushNotificationsEnabled ?? defaults.cautionAlertsEnabled,
+            criticalAlertsEnabled: criticalAlertsEnabled ?? pushNotificationsEnabled ?? defaults.criticalAlertsEnabled,
+            disconnectedAlertsEnabled: disconnectedAlertsEnabled ?? defaults.disconnectedAlertsEnabled,
+            reconnectedAlertsEnabled: reconnectedAlertsEnabled ?? defaults.reconnectedAlertsEnabled
+        )
+    }
+}
+
+private struct AlertPreferencesMutation: Encodable {
+    let userID: UUID
+    let deviceID: String
+    let cautionInactivityMinutes: Int
+    let criticalInactivityMinutes: Int
+    let cautionAlertsEnabled: Bool
+    let criticalAlertsEnabled: Bool
+    let pushNotificationsEnabled: Bool
+    let disconnectedAlertsEnabled: Bool
+    let reconnectedAlertsEnabled: Bool
+
+    enum CodingKeys: String, CodingKey {
+        case userID = "user_id"
+        case deviceID = "device_id"
+        case cautionInactivityMinutes = "caution_inactivity_minutes"
+        case criticalInactivityMinutes = "critical_inactivity_minutes"
+        case cautionAlertsEnabled = "caution_alerts_enabled"
+        case criticalAlertsEnabled = "critical_alerts_enabled"
+        case pushNotificationsEnabled = "push_notifications_enabled"
+        case disconnectedAlertsEnabled = "disconnected_alerts_enabled"
+        case reconnectedAlertsEnabled = "reconnected_alerts_enabled"
     }
 }
 

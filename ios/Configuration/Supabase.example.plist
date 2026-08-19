@@ -8,5 +8,13 @@
     <string>your-public-anon-key</string>
     <key>ELEPH_DEVICE_ID</key>
     <string>bathroom-monitor-001</string>
+    <key>ELEPH_PRIVACY_POLICY_URL</key>
+    <string></string>
+    <key>ELEPH_TERMS_URL</key>
+    <string></string>
+    <key>ELEPH_SUPPORT_URL</key>
+    <string>mailto:kojiychan@gmail.com</string>
+    <key>ELEPH_DATA_DELETION_URL</key>
+    <string>mailto:kojiychan@gmail.com?subject=Eleph%20Account%20and%20Data%20Deletion%20Request</string>
 </dict>
 </plist>

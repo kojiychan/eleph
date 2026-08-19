@@ -55,7 +55,7 @@ enum MockData {
             device: device,
             alertPreferences: .defaults,
             nighttimeSchedule: .defaults,
-            profile: UserProfile(caregiverName: "Koji", email: "koji@example.com"),
+            profile: UserProfile(firstName: "Koji", lastName: "", caregiverName: "Koji", email: "koji@example.com", phone: "555-0100"),
             contacts: [
                 CaregiverContact(id: UUID(), name: "Maya", relationship: "Daughter", phoneNumber: "(555) 010-1234"),
                 CaregiverContact(id: UUID(), name: "Dr. Lee", relationship: "Clinician", phoneNumber: "(555) 010-9876")

@@ -4,10 +4,10 @@ SwiftUI iOS 17+ companion app for the Eleph bathroom monitor. This frontend help
 
 ## Current Status
 
-The app can read real Supabase motion data when configured, and falls back to realistic mock data when no local Supabase configuration exists.
+The app can read real Supabase motion data, create Supabase Auth accounts, and save beta user/device settings when configured. Debug builds fall back to realistic mock data when no local Supabase configuration exists. TestFlight and release builds require Supabase configuration.
 
 - No production Bluetooth or Wi-Fi provisioning is implemented.
-- No production authentication or notifications are implemented.
+- Notification delivery is not implemented.
 - No Supabase credentials are hardcoded or required.
 
 ## Architecture
@@ -19,7 +19,8 @@ The app uses SwiftUI with MVVM-style view models and async/await-ready service p
 - `ViewModels/`: screen state and user actions.
 - `Services/`: repository and integration protocols plus Supabase and mock implementations.
 - `Components/`: reusable cards, banners, timeline, metric cards, threshold picker, empty/loading/error states, and onboarding progress.
-- `Utilities/`: formatting helpers, colors, loadable state, and preview scenarios.
+- `Utilities/`: configuration, formatting helpers, colors, loadable state, and preview scenarios.
+- `Legal/`: bundled Privacy Policy and Terms and Conditions text displayed from Settings.
 
 ## Navigation
 
@@ -40,27 +41,23 @@ The first-run onboarding is state-driven and includes:
 
 Existing users enter email and password, then continue to the dashboard.
 
-New monitor setup includes:
+For the first TestFlight beta, new-user setup is intentionally tied to the existing monitor (`bathroom-monitor-001`) and includes:
 
-1. Plug in and place the monitor
-2. Bluetooth setup
-3. Wi-Fi setup information
-4. Choose who is being monitored and name the room
-5. Alert preferences
-6. Notification preferences
-7. Motion test
-8. Create account with caregiver name, email, required phone number, password, and password confirmation
-9. Setup complete
+1. Choose who is being monitored and name the room
+2. Alert preferences
+3. Notification preferences
+4. Create account with first name, last name, email, required phone number, password, and password confirmation
+5. Setup complete
 
 ## Device ID Persistence
 
-During onboarding, Bluetooth discovery provides the monitor identifier. The current beta monitor resolves to:
+During beta onboarding, the app assigns the existing monitor identifier automatically:
 
 ```text
 bathroom-monitor-001
 ```
 
-`DeviceIdentityStore` defines the persistence boundary. `UserDefaultsDeviceIdentityStore` stores the normalized device ID so it does not change every launch. A Keychain-backed implementation can replace it later when production authentication is added.
+`DeviceIdentityStore` defines the persistence boundary. `UserDefaultsDeviceIdentityStore` stores the normalized device ID so it does not change every launch. Phase 2 can replace the beta assignment with Bluetooth discovery and Wi-Fi provisioning.
 
 ## Supabase Setup
 
@@ -76,12 +73,17 @@ To connect a local build:
 2. Set `SUPABASE_URL`.
 3. Set `SUPABASE_ANON_KEY`.
 4. Set `ELEPH_DEVICE_ID` if your monitor ID differs from `bathroom-monitor-001`.
+5. Optionally set legal/support URLs:
+   - `ELEPH_PRIVACY_POLICY_URL`
+   - `ELEPH_TERMS_URL`
+   - `ELEPH_SUPPORT_URL`
+   - `ELEPH_DATA_DELETION_URL`
 
 `Configuration/Supabase.plist` is ignored by git. Use only a public anon key in the app. Never ship a service-role key.
 
-The app uses `AppServiceContainer.liveOrMock()`: if Supabase configuration is present, it creates `SupabaseAppRepository`; otherwise it uses `MockAppRepository`.
+The app uses `AppServiceContainer.liveOrMock()`: if Supabase configuration is present, it creates `SupabaseAppRepository`; otherwise debug builds use `MockAppRepository`. Release/TestFlight builds fail fast if configuration is missing.
 
-The Supabase schema needs select access for the iOS app. Apply `../supabase/schema.sql` so `motion_events` and optional `devices` read policies are present.
+The Supabase schema needs Auth, profile, device link, device settings, device, and motion event policies for the iOS app. Apply `../supabase/schema.sql`.
 
 ## Future Integrations
 
@@ -89,12 +91,16 @@ The frontend is prepared for production services through protocols:
 
 - `BluetoothProvisioningService`: replace `MockBluetoothProvisioningService` with Core Bluetooth setup.
 - `WiFiProvisioningService`: send Wi-Fi credentials to the monitor after Bluetooth connection.
-- `AuthenticationService`: connect Sign in with Apple, Google, or email auth.
+- `AuthenticationService`: Supabase email/password auth is implemented. Sign in with Apple and Google are intentionally disabled for this beta.
 - `DeviceRepository`: currently reads Supabase `devices` when available and falls back to local device identity.
 - `MotionEventRepository`: currently reads Supabase `motion_events` where `motion_events.device_id` matches the saved monitor ID.
 - `AlertRepository`: later persist alert preferences and read alert history.
 
 Supabase code belongs in repository implementations, not directly inside SwiftUI views.
+
+## Legal and Support
+
+Settings includes in-app Privacy Policy and Terms and Conditions screens using the bundled markdown documents. Settings also includes links for support and account/data deletion requests. Until public web pages are available, the beta defaults route support and deletion requests to `kojiychan@gmail.com`.
 
 ## Development
 

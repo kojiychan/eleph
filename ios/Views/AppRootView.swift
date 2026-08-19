@@ -15,6 +15,14 @@ struct AppRootView: View {
                 )
             }
         }
+        .task {
+            await rootViewModel.restoreSessionIfNeeded()
+        }
+        .onOpenURL { url in
+            Task {
+                await rootViewModel.handleAuthCallback(url)
+            }
+        }
     }
 }
 

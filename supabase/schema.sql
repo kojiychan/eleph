@@ -197,6 +197,8 @@ create table if not exists public.device_settings (
     quiet_hours_start time,
     quiet_hours_end time,
     timezone text not null default 'America/Los_Angeles',
+    caution_alerts_enabled boolean not null default true,
+    critical_alerts_enabled boolean not null default true,
     push_notifications_enabled boolean not null default true,
     sms_notifications_enabled boolean not null default false,
     disconnected_alerts_enabled boolean not null default true,
@@ -205,6 +207,10 @@ create table if not exists public.device_settings (
     updated_at timestamptz not null default now(),
     unique (user_id, device_id)
 );
+
+alter table public.device_settings
+    add column if not exists caution_alerts_enabled boolean not null default true,
+    add column if not exists critical_alerts_enabled boolean not null default true;
 
 create index if not exists device_settings_user_id_idx
     on public.device_settings (user_id);
@@ -272,4 +278,45 @@ create policy "users can update own device settings"
             where user_devices.user_id = auth.uid()
                 and user_devices.device_id = device_settings.device_id
         )
+    );
+
+create table if not exists public.beta_signups (
+    id uuid primary key default gen_random_uuid(),
+    first_name text not null check (length(trim(first_name)) > 0),
+    last_name text not null check (length(trim(last_name)) > 0),
+    email text not null check (email ~* '^[^@\s]+@[^@\s]+\.[^@\s]+$'),
+    email_normalized text generated always as (lower(trim(email))) stored,
+    phone text not null check (length(trim(phone)) >= 7),
+    source text not null default 'landing_page',
+    status text not null default 'new'
+        check (status in ('new', 'contacted', 'invited', 'accepted', 'declined')),
+    created_at timestamptz not null default now(),
+    updated_at timestamptz not null default now(),
+    unique (email_normalized)
+);
+
+create index if not exists beta_signups_created_at_idx
+    on public.beta_signups (created_at desc);
+
+drop trigger if exists set_beta_signups_updated_at on public.beta_signups;
+create trigger set_beta_signups_updated_at
+    before update on public.beta_signups
+    for each row
+    execute function public.set_updated_at();
+
+alter table public.beta_signups enable row level security;
+
+drop policy if exists "allow anon beta signup inserts" on public.beta_signups;
+create policy "allow anon beta signup inserts"
+    on public.beta_signups
+    for insert
+    to anon
+    with check (
+        length(trim(first_name)) > 0
+        and length(trim(last_name)) > 0
+        and email = lower(trim(email))
+        and email ~* '^[^@\s]+@[^@\s]+\.[^@\s]+$'
+        and length(trim(phone)) >= 7
+        and source = 'landing_page'
+        and status = 'new'
     );

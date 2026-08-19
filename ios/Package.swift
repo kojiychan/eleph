@@ -24,12 +24,17 @@ let package = Package(
             path: ".",
             exclude: [
                 "README.md",
+                "Eleph.xcodeproj",
+                "Eleph.entitlements",
+                "Info.plist",
+                "PrivacyInfo.xcprivacy",
                 "Configuration/Supabase.example.plist",
                 "Configuration/Supabase.template.xcconfig"
             ],
             resources: [
                 .process("Assets.xcassets"),
-                .process("Configuration")
+                .process("Configuration"),
+                .process("Legal")
             ]
         )
     ]

@@ -9,7 +9,7 @@ struct ActivityView: View {
             ScrollView {
                 VStack(alignment: .leading, spacing: 18) {
                     header
-                    datePicker
+                    rangePicker
                     filterPicker
 
                     switch viewModel.state {
@@ -47,22 +47,22 @@ struct ActivityView: View {
         }
     }
 
-    private var datePicker: some View {
-        ScrollView(.horizontal, showsIndicators: false) {
-            HStack(spacing: 8) {
-                ForEach(viewModel.datesForPicker(), id: \.self) { date in
-                    Button {
-                        viewModel.selectedDate = date
-                        Task { await viewModel.load() }
-                    } label: {
-                        Text(Calendar.current.isDateInToday(date) ? "Today" : Formatters.day.string(from: date))
-                            .font(.subheadline.weight(.semibold))
-                            .padding(.horizontal, 14)
-                            .padding(.vertical, 10)
-                            .background(Calendar.current.isDate(date, inSameDayAs: viewModel.selectedDate) ? Color.blue : AppColors.secondaryGroupedBackground, in: Capsule())
-                            .foregroundStyle(Calendar.current.isDate(date, inSameDayAs: viewModel.selectedDate) ? .white : .primary)
-                    }
+    private var rangePicker: some View {
+        HStack(spacing: 8) {
+            ForEach(ActivityDateRange.allCases) { range in
+                Button {
+                    viewModel.selectedRange = range
+                    Task { await viewModel.load() }
+                } label: {
+                    Text(range.rawValue)
+                        .font(.subheadline.weight(.semibold))
+                        .padding(.horizontal, 14)
+                        .padding(.vertical, 10)
+                        .frame(minWidth: 74)
+                        .background(viewModel.selectedRange == range ? Color.blue : AppColors.secondaryGroupedBackground, in: Capsule())
+                        .foregroundStyle(viewModel.selectedRange == range ? .white : .primary)
                 }
+                .buttonStyle(.plain)
             }
         }
     }
@@ -118,9 +118,17 @@ struct ActivityView: View {
                 EmptyStateView(title: "No Events", message: "No matching activity is available for this date.", systemImage: "line.3.horizontal.decrease.circle")
                     .frame(minHeight: 180)
             } else {
-                ActivityTimeline(items: items)
-                    .padding(16)
-                    .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
+                VStack(alignment: .leading, spacing: 16) {
+                    ForEach(viewModel.groupedTimelineItems(items), id: \.title) { group in
+                        VStack(alignment: .leading, spacing: 10) {
+                            Text(group.title)
+                                .font(.headline)
+                            ActivityTimeline(items: group.items)
+                        }
+                    }
+                }
+                .padding(16)
+                .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
             }
         }
     }

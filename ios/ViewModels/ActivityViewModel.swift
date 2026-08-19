@@ -3,6 +3,7 @@ import Foundation
 @MainActor
 final class ActivityViewModel: ObservableObject {
     @Published var selectedDate = Date()
+    @Published var selectedRange: ActivityDateRange = .today
     @Published var selectedFilter: ActivityEventKind = .all
     @Published private(set) var events: [MotionEvent] = []
     @Published private(set) var alerts: [AlertEvent] = []
@@ -21,17 +22,17 @@ final class ActivityViewModel: ObservableObject {
 
         do {
             let device = try await services.deviceRepository.fetchDevice()
-            async let loadedEvents = services.motionRepository.fetchMotionEvents(deviceID: device.id, date: selectedDate)
+            async let loadedEvents = services.motionRepository.fetchMotionEvents(deviceID: device.id, date: selectedRange == .today ? selectedDate : nil)
             async let loadedSummaries = services.motionRepository.fetchDailySummaries(deviceID: device.id)
             async let loadedAlerts = services.alertRepository.fetchAlerts(deviceID: device.id)
             async let loadedTrends = services.motionRepository.fetchTrend(deviceID: device.id)
-            events = try await loadedEvents
+            events = eventsInSelectedRange(try await loadedEvents)
             summaries = try await loadedSummaries
             alerts = try await loadedAlerts
             trends = try await loadedTrends
             state = .loaded(timelineItems())
         } catch {
-            state = .failed(error.localizedDescription)
+            state = .failed(Formatters.friendlyError(error.localizedDescription))
         }
     }
 
@@ -62,10 +63,46 @@ final class ActivityViewModel: ObservableObject {
         (0..<7).compactMap { Calendar.current.date(byAdding: .day, value: -$0, to: Date()) }
     }
 
+    func groupedTimelineItems(_ items: [ActivityTimelineItem]) -> [(title: String, items: [ActivityTimelineItem])] {
+        let calendar = Calendar.current
+        let grouped = Dictionary(grouping: items) { item in
+            calendar.startOfDay(for: item.date)
+        }
+
+        return grouped
+            .sorted { $0.key > $1.key }
+            .map { (title: Formatters.daySectionTitle($0.key), items: $0.value.sorted { $0.date > $1.date }) }
+    }
+
+    private func eventsInSelectedRange(_ loadedEvents: [MotionEvent]) -> [MotionEvent] {
+        guard selectedRange != .today,
+              let cutoff = Calendar.current.date(byAdding: .day, value: -(selectedRange.dayCount - 1), to: Calendar.current.startOfDay(for: Date())) else {
+            return loadedEvents
+        }
+
+        return loadedEvents.filter { $0.detectedAt >= cutoff }
+    }
+
     private func inactivityGap(after event: MotionEvent) -> String {
         guard let next = events.first(where: { $0.detectedAt < event.detectedAt }) else {
             return "\(Formatters.relative(event.detectedAt))"
         }
         return "\(Formatters.duration(event.detectedAt.timeIntervalSince(next.detectedAt))) without detected motion"
+    }
+}
+
+enum ActivityDateRange: String, CaseIterable, Identifiable {
+    case today = "Today"
+    case sevenDays = "7 days"
+    case thirtyDays = "30 days"
+
+    var id: String { rawValue }
+
+    var dayCount: Int {
+        switch self {
+        case .today: 1
+        case .sevenDays: 7
+        case .thirtyDays: 30
+        }
     }
 }

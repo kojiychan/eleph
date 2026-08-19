@@ -21,6 +21,12 @@ protocol AuthenticationService {
     func signInWithApple() async throws
     func signInWithGoogle() async throws
     func continueWithEmail(_ email: String) async throws
+    func signIn(email: String, password: String) async throws
+    func createAccount(_ registration: AccountRegistration) async throws
+    func handleAuthCallback(_ url: URL) async throws
+    func loadProfile() async throws -> AccountProfile
+    func saveProfile(_ profile: AccountProfile) async throws
+    func hasActiveSession() async -> Bool
     func signOut() async throws
 }
 
@@ -49,11 +55,18 @@ struct AppServiceContainer {
     let bluetoothService: BluetoothProvisioningService
     let wifiService: WiFiProvisioningService
     let identityStore: DeviceIdentityStore
+    let isUsingMockData: Bool
+    let betaMonitorDeviceID: String
+    let legalLinks: LegalLinks
 
     static func liveOrMock() -> AppServiceContainer {
         let store = UserDefaultsDeviceIdentityStore()
         guard let configuration = AppConfiguration.load() else {
+            #if DEBUG
             return mock()
+            #else
+            fatalError("Supabase configuration is required for TestFlight and release builds.")
+            #endif
         }
 
         let repository = SupabaseAppRepository(configuration: configuration, identityStore: store)
@@ -61,10 +74,13 @@ struct AppServiceContainer {
             deviceRepository: repository,
             motionRepository: repository,
             alertRepository: repository,
-            authenticationService: MockAuthenticationService(),
+            authenticationService: SupabaseAuthenticationService(configuration: configuration, identityStore: store),
             bluetoothService: MockBluetoothProvisioningService(),
             wifiService: MockWiFiProvisioningService(),
-            identityStore: store
+            identityStore: store,
+            isUsingMockData: false,
+            betaMonitorDeviceID: configuration.monitorDeviceID,
+            legalLinks: configuration.legalLinks
         )
     }
 
@@ -80,7 +96,10 @@ struct AppServiceContainer {
             authenticationService: MockAuthenticationService(),
             bluetoothService: MockBluetoothProvisioningService(),
             wifiService: MockWiFiProvisioningService(),
-            identityStore: store
+            identityStore: store,
+            isUsingMockData: true,
+            betaMonitorDeviceID: data.device.id,
+            legalLinks: .betaDefaults
         )
     }
 }

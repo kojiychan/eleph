@@ -21,6 +21,13 @@ The monitor does not contain GPIO or Supabase-specific logic. Sensors implement 
 
 ```text
 .
+├── landing/
+│   ├── assets/
+│   ├── index.html
+│   ├── script.js
+│   └── styles.css
+├── vercel.json
+├── package.json
 ├── pyproject.toml
 ├── README.md
 ├── ios/
@@ -72,6 +79,35 @@ Run the test suite:
 
 ```bash
 python -m pytest
+```
+
+Run the landing page locally:
+
+```bash
+npm run dev
+```
+
+Build the static landing page for Vercel:
+
+```bash
+npm run build
+```
+
+Vercel uses `vercel.json` to run the build and serve the generated `dist/` directory.
+
+The beta signup form posts to Supabase from the browser. Configure these Vercel environment
+variables with your Supabase project URL and public anon key:
+
+```text
+NEXT_PUBLIC_SUPABASE_URL
+NEXT_PUBLIC_SUPABASE_ANON_KEY
+```
+
+Apply the `beta_signups` table in `supabase/schema.sql`, or run the standalone helper with a
+Supabase Postgres connection string:
+
+```bash
+SUPABASE_DB_URL='postgresql://...' python scripts/create_beta_signups_table.py
 ```
 
 Run the application in simulator mode:
