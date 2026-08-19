@@ -66,18 +66,46 @@ a {
 }
 
 .brand {
-  gap: 10px;
-  font-weight: 760;
+  gap: 12px;
+  font-size: 1.08rem;
+  font-weight: 820;
 }
 
-.brand-mark {
-  display: grid;
-  width: 34px;
-  height: 34px;
-  place-items: center;
-  border: 1px solid currentColor;
-  border-radius: 50%;
-  font-size: 0.9rem;
+.brand-logo {
+  width: 50px;
+  height: 38px;
+  flex: 0 0 auto;
+  overflow: visible;
+}
+
+.logo-elephant {
+  fill: currentColor;
+}
+
+.logo-smile {
+  fill: none;
+  stroke: var(--paper);
+  stroke-linecap: round;
+  stroke-width: 4.2;
+}
+
+.logo-eye {
+  fill: var(--paper);
+}
+
+.logo-signal {
+  fill: none;
+  stroke: var(--gold);
+  stroke-linecap: round;
+  stroke-width: 6.2;
+}
+
+.site-header:not(.is-scrolled) .logo-smile {
+  stroke: rgba(23, 33, 29, 0.86);
+}
+
+.site-header:not(.is-scrolled) .logo-eye {
+  fill: rgba(23, 33, 29, 0.86);
 }
 
 .nav-links {
