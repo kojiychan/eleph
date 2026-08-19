@@ -1,0 +1,5 @@
+Configuration/Supabase.plist
+*.xcuserstate
+xcuserdata/
+.build/
+DerivedData/

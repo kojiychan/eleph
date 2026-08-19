@@ -1,0 +1,11 @@
+[Unit]
+Description=Post synthetic Eleph motion event
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+WorkingDirectory=/home/kojiychan/eleph
+EnvironmentFile=-/home/kojiychan/eleph/.env
+Environment=PYTHONPATH=/home/kojiychan/eleph/src
+ExecStart=/usr/bin/python3 -m eleph post-fake-motion --device-id bathroom-monitor-001 --strict-upload

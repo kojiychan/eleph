@@ -1,0 +1,17 @@
+[Unit]
+Description=Eleph C4001 motion monitor
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=kojiychan
+WorkingDirectory=/home/kojiychan/eleph
+EnvironmentFile=/home/kojiychan/eleph/.env
+Environment=PYTHONPATH=/home/kojiychan/eleph/src
+ExecStart=/usr/bin/python3 -m eleph monitor --sensor c4001-i2c --device-id bathroom-monitor-001 --max-range-cm 300 --trigger-range-cm 300
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

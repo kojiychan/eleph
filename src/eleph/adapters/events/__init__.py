@@ -1,0 +1,1 @@
+"""Motion event sink adapters."""

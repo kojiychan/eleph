@@ -1,0 +1,14 @@
+[Unit]
+Description=Post synthetic Eleph motion event when network is online
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+WorkingDirectory=/home/kojiychan/eleph
+EnvironmentFile=-/home/kojiychan/eleph/.env
+Environment=PYTHONPATH=/home/kojiychan/eleph/src
+ExecStart=/home/kojiychan/eleph/scripts/post_fake_motion_with_retry.sh
+
+[Install]
+WantedBy=multi-user.target
