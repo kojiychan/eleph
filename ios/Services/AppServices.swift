@@ -30,6 +30,14 @@ protocol AuthenticationService {
     func signOut() async throws
 }
 
+struct AccountVerificationRequired: LocalizedError {
+    let email: String
+
+    var errorDescription: String? {
+        "Check your email to verify your account."
+    }
+}
+
 protocol BluetoothProvisioningService {
     func discoverMonitor() async throws -> MonitorDevice
     func connect(to device: MonitorDevice) async throws -> MonitorDevice

@@ -34,9 +34,7 @@ final class AppRootViewModel: ObservableObject {
         } catch {
             return
         }
-        if services.identityStore.hasCompletedOnboarding() {
-            onboardingCompleted = true
-        }
+        completeOnboarding()
     }
 
     func signOut() async {

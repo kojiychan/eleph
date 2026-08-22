@@ -38,6 +38,7 @@ final class OnboardingViewModel: ObservableObject {
     @Published var showsAccountConfirmPassword = false
     @Published var showsLoginPassword = false
     @Published var errorMessage: String?
+    @Published var verificationEmail = ""
 
     private let services: AppServiceContainer
 
@@ -116,6 +117,9 @@ final class OnboardingViewModel: ObservableObject {
 
     func startExistingUserLogin() {
         errorMessage = nil
+        if !accountEmail.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+            loginEmail = accountEmail.trimmingCharacters(in: .whitespacesAndNewlines)
+        }
         step = .login
     }
 
@@ -223,6 +227,11 @@ final class OnboardingViewModel: ObservableObject {
             errorMessage = nil
             try await services.authenticationService.createAccount(accountRegistration)
             return true
+        } catch let verificationRequired as AccountVerificationRequired {
+            verificationEmail = verificationRequired.email
+            loginEmail = verificationRequired.email
+            step = .verifyEmail
+            return false
         } catch {
             errorMessage = Formatters.friendlyError(error.localizedDescription)
             return false
@@ -322,6 +331,7 @@ enum OnboardingStep: Int, CaseIterable, Identifiable {
     case notifications
     case motionTest
     case account
+    case verifyEmail
     case complete
 
     var id: Int { rawValue }
@@ -342,6 +352,8 @@ enum OnboardingStep: Int, CaseIterable, Identifiable {
             .account
         case .account:
             .complete
+        case .verifyEmail:
+            .login
         }
     }
 
@@ -365,6 +377,8 @@ enum OnboardingStep: Int, CaseIterable, Identifiable {
             .notifications
         case .account:
             .notifications
+        case .verifyEmail:
+            .account
         case .complete:
             .account
         }
@@ -381,6 +395,7 @@ enum OnboardingStep: Int, CaseIterable, Identifiable {
             .alerts,
             .notifications,
             .account,
+            .verifyEmail,
             .complete
         ]
     }

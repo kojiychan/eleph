@@ -60,7 +60,8 @@ actor SupabaseAuthenticationService: AuthenticationService {
         case .session(let session):
             userID = session.user.id
         case .user:
-            throw AppServiceError.validation("Check your email to confirm your account, then sign in to finish setup.")
+            identityStore.saveDeviceID(registration.deviceID)
+            throw AccountVerificationRequired(email: normalizedEmail)
         }
 
         identityStore.saveDeviceID(registration.deviceID)

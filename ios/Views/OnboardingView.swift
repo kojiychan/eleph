@@ -45,6 +45,8 @@ struct OnboardingView: View {
             wifi
         case .account:
             account
+        case .verifyEmail:
+            verifyEmail
         case .naming:
             naming
         case .alerts:
@@ -272,6 +274,37 @@ struct OnboardingView: View {
         .textFieldStyle(.roundedBorder)
     }
 
+    private var verifyEmail: some View {
+        VStack(alignment: .leading, spacing: 18) {
+            onboardingHero(
+                symbol: "envelope.badge.fill",
+                title: "Verify your email",
+                subtitle: "We sent a confirmation link to \(viewModel.verificationEmail.isEmpty ? "your email address" : viewModel.verificationEmail)."
+            )
+
+            VStack(alignment: .leading, spacing: 12) {
+                Label("Open the email from Eleph or Supabase.", systemImage: "1.circle.fill")
+                Label("Tap the confirmation link.", systemImage: "2.circle.fill")
+                Label("Return here and sign in with your email and password.", systemImage: "3.circle.fill")
+            }
+            .font(.body)
+            .foregroundStyle(.secondary)
+
+            Button {
+                viewModel.startExistingUserLogin()
+            } label: {
+                Label("I Verified My Email", systemImage: "checkmark.circle.fill")
+                    .frame(maxWidth: .infinity)
+            }
+            .buttonStyle(.borderedProminent)
+            .controlSize(.large)
+
+            Text("If the confirmation link opens a localhost page, the Supabase Auth redirect URL needs to be updated for this app.")
+                .font(.footnote)
+                .foregroundStyle(.secondary)
+        }
+    }
+
     private var naming: some View {
         VStack(alignment: .leading, spacing: 18) {
             onboardingHero(symbol: "person.crop.circle.badge.questionmark", title: "Who are you monitoring?", subtitle: "These names help make alerts and activity updates easier to understand.")
@@ -465,6 +498,7 @@ struct OnboardingView: View {
         case .login: viewModel.isSubmitting ? "Signing In" : "Sign In"
         case .placement: "I've Placed It"
         case .account: viewModel.isSubmitting ? "Creating Account" : "Create Account"
+        case .verifyEmail: "Go to Sign In"
         case .complete: "Go to Dashboard"
         default: "Continue"
         }
@@ -485,6 +519,8 @@ struct OnboardingView: View {
             if await viewModel.createAccount() {
                 viewModel.advance()
             }
+        case .verifyEmail:
+            viewModel.startExistingUserLogin()
         case .complete:
             await viewModel.saveDeviceIdentity()
             onComplete()
