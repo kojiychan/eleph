@@ -48,21 +48,23 @@ struct ActivityView: View {
     }
 
     private var rangePicker: some View {
-        HStack(spacing: 8) {
-            ForEach(ActivityDateRange.allCases) { range in
-                Button {
-                    viewModel.selectedRange = range
-                    Task { await viewModel.load() }
-                } label: {
-                    Text(range.rawValue)
-                        .font(.subheadline.weight(.semibold))
-                        .padding(.horizontal, 14)
-                        .padding(.vertical, 10)
-                        .frame(minWidth: 74)
-                        .background(viewModel.selectedRange == range ? Color.blue : AppColors.secondaryGroupedBackground, in: Capsule())
-                        .foregroundStyle(viewModel.selectedRange == range ? .white : .primary)
+        ScrollView(.horizontal, showsIndicators: false) {
+            HStack(spacing: 8) {
+                ForEach(ActivityDateRange.allCases) { range in
+                    Button {
+                        viewModel.selectedRange = range
+                        Task { await viewModel.load() }
+                    } label: {
+                        Text(range.rawValue)
+                            .font(.subheadline.weight(.semibold))
+                            .padding(.horizontal, 14)
+                            .padding(.vertical, 10)
+                            .frame(minWidth: 74)
+                            .background(viewModel.selectedRange == range ? Color.blue : AppColors.secondaryGroupedBackground, in: Capsule())
+                            .foregroundStyle(viewModel.selectedRange == range ? .white : .primary)
+                    }
+                    .buttonStyle(.plain)
                 }
-                .buttonStyle(.plain)
             }
         }
     }
@@ -115,7 +117,7 @@ struct ActivityView: View {
             Text("Timeline")
                 .font(.title2.weight(.bold))
             if items.isEmpty {
-                EmptyStateView(title: "No Events", message: "No matching activity is available for this date.", systemImage: "line.3.horizontal.decrease.circle")
+                EmptyStateView(title: "No Events", message: "No matching activity is available for this range.", systemImage: "line.3.horizontal.decrease.circle")
                     .frame(minHeight: 180)
             } else {
                 VStack(alignment: .leading, spacing: 16) {

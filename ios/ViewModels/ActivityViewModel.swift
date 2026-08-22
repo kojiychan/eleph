@@ -3,7 +3,7 @@ import Foundation
 @MainActor
 final class ActivityViewModel: ObservableObject {
     @Published var selectedDate = Date()
-    @Published var selectedRange: ActivityDateRange = .today
+    @Published var selectedRange: ActivityDateRange = .all
     @Published var selectedFilter: ActivityEventKind = .all
     @Published private(set) var events: [MotionEvent] = []
     @Published private(set) var alerts: [AlertEvent] = []
@@ -75,8 +75,7 @@ final class ActivityViewModel: ObservableObject {
     }
 
     private func eventsInSelectedRange(_ loadedEvents: [MotionEvent]) -> [MotionEvent] {
-        guard selectedRange != .today,
-              let cutoff = Calendar.current.date(byAdding: .day, value: -(selectedRange.dayCount - 1), to: Calendar.current.startOfDay(for: Date())) else {
+        guard let cutoff = selectedRange.cutoffDate else {
             return loadedEvents
         }
 
@@ -92,6 +91,7 @@ final class ActivityViewModel: ObservableObject {
 }
 
 enum ActivityDateRange: String, CaseIterable, Identifiable {
+    case all = "All"
     case today = "Today"
     case sevenDays = "7 days"
     case thirtyDays = "30 days"
@@ -100,9 +100,25 @@ enum ActivityDateRange: String, CaseIterable, Identifiable {
 
     var dayCount: Int {
         switch self {
+        case .all: 0
         case .today: 1
         case .sevenDays: 7
         case .thirtyDays: 30
+        }
+    }
+
+    var cutoffDate: Date? {
+        switch self {
+        case .all:
+            return nil
+        case .today:
+            return Calendar.current.startOfDay(for: Date())
+        case .sevenDays, .thirtyDays:
+            return Calendar.current.date(
+                byAdding: .day,
+                value: -(dayCount - 1),
+                to: Calendar.current.startOfDay(for: Date())
+            )
         }
     }
 }
