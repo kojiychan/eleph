@@ -6,6 +6,7 @@ actor SupabaseAuthenticationService: AuthenticationService {
 
     private let client: SupabaseClient
     private let identityStore: DeviceIdentityStore
+    private let betaDeviceID: String
 
     init(configuration: AppConfiguration, identityStore: DeviceIdentityStore) {
         self.client = SupabaseClient(
@@ -13,6 +14,7 @@ actor SupabaseAuthenticationService: AuthenticationService {
             supabaseKey: configuration.supabaseAnonKey
         )
         self.identityStore = identityStore
+        self.betaDeviceID = configuration.monitorDeviceID
     }
 
     func signInWithApple() async throws {
@@ -32,6 +34,8 @@ actor SupabaseAuthenticationService: AuthenticationService {
             email: email.trimmingCharacters(in: .whitespacesAndNewlines),
             password: password
         )
+        let session = try await client.auth.session
+        try await ensureBetaDeviceLink(userID: session.user.id)
     }
 
     func createAccount(_ registration: AccountRegistration) async throws {
@@ -74,7 +78,8 @@ actor SupabaseAuthenticationService: AuthenticationService {
     }
 
     func handleAuthCallback(_ url: URL) async throws {
-        _ = try await client.auth.session(from: url)
+        let session = try await client.auth.session(from: url)
+        try await ensureBetaDeviceLink(userID: session.user.id)
     }
 
     func loadProfile() async throws -> AccountProfile {
@@ -159,6 +164,12 @@ actor SupabaseAuthenticationService: AuthenticationService {
                 returning: .minimal
             )
             .execute()
+    }
+
+    private func ensureBetaDeviceLink(userID: UUID) async throws {
+        let deviceID = identityStore.loadDeviceID() ?? betaDeviceID
+        identityStore.saveDeviceID(deviceID)
+        try await upsertUserDevice(userID: userID, deviceID: deviceID)
     }
 
     private func upsertDeviceSettings(userID: UUID, registration: AccountRegistration) async throws {
