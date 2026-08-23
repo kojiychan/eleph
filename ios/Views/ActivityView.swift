@@ -82,17 +82,30 @@ struct ActivityView: View {
     }
 
     private var summarySection: some View {
-        let summary = viewModel.summaries.first
-        return VStack(alignment: .leading, spacing: 12) {
-            Text("Daily Summary")
+        VStack(alignment: .leading, spacing: 12) {
+            Text("Last 24 Hours")
                 .font(.title2.weight(.bold))
             LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 12) {
-                MetricCard(title: "Motion sessions", value: "\(summary?.visits ?? 0)", systemImage: "figure.walk")
-                MetricCard(title: "Current inactivity", value: Formatters.duration(summary?.currentInactivity ?? 0), systemImage: "timer")
-                MetricCard(title: "Longest inactivity", value: Formatters.duration(summary?.longestInactivity ?? 0), systemImage: "moon")
-                MetricCard(title: "Compared with usual", value: summary?.comparison ?? "No comparison yet", systemImage: "chart.line.uptrend.xyaxis")
+                MetricCard(title: "Sensor triggers", value: "\(viewModel.pastDayMotionCount)", systemImage: "figure.walk")
+                MetricCard(title: "Since last activity", value: inactivityValue, systemImage: "timer")
+                MetricCard(title: "Longest gap", value: longestGapValue, systemImage: "moon")
+                MetricCard(title: "Latest activity", value: viewModel.activityComparison, systemImage: "chart.line.uptrend.xyaxis")
             }
         }
+    }
+
+    private var inactivityValue: String {
+        guard let currentInactivity = viewModel.currentInactivity else {
+            return "No activity"
+        }
+        return Formatters.duration(currentInactivity)
+    }
+
+    private var longestGapValue: String {
+        guard let longestInactivityPastDay = viewModel.longestInactivityPastDay else {
+            return "No activity"
+        }
+        return Formatters.duration(longestInactivityPastDay)
     }
 
     private var trendSection: some View {

@@ -9,6 +9,10 @@ final class ActivityViewModel: ObservableObject {
     @Published private(set) var alerts: [AlertEvent] = []
     @Published private(set) var summaries: [DailyActivitySummary] = []
     @Published private(set) var trends: [TrendDay] = []
+    @Published private(set) var pastDayMotionCount = 0
+    @Published private(set) var currentInactivity: TimeInterval?
+    @Published private(set) var longestInactivityPastDay: TimeInterval?
+    @Published private(set) var activityComparison = "No activity has been recorded yet"
     @Published private(set) var state: LoadableState<[ActivityTimelineItem]> = .idle
 
     private let services: AppServiceContainer
@@ -22,11 +26,13 @@ final class ActivityViewModel: ObservableObject {
 
         do {
             let device = try await services.deviceRepository.fetchDevice()
-            async let loadedEvents = services.motionRepository.fetchMotionEvents(deviceID: device.id, date: selectedRange == .today ? selectedDate : nil)
+            async let loadedEvents = services.motionRepository.fetchMotionEvents(deviceID: device.id, date: nil)
             async let loadedSummaries = services.motionRepository.fetchDailySummaries(deviceID: device.id)
             async let loadedAlerts = services.alertRepository.fetchAlerts(deviceID: device.id)
             async let loadedTrends = services.motionRepository.fetchTrend(deviceID: device.id)
-            events = eventsInSelectedRange(try await loadedEvents)
+            let allEvents = try await loadedEvents
+            updateOverview(from: allEvents)
+            events = eventsInSelectedRange(allEvents)
             summaries = try await loadedSummaries
             alerts = try await loadedAlerts
             trends = try await loadedTrends
@@ -80,6 +86,31 @@ final class ActivityViewModel: ObservableObject {
         }
 
         return loadedEvents.filter { $0.detectedAt >= cutoff }
+    }
+
+    private func updateOverview(from loadedEvents: [MotionEvent]) {
+        let sorted = loadedEvents.sorted { $0.detectedAt < $1.detectedAt }
+        let now = Date()
+        let dayAgo = now.addingTimeInterval(-24 * 60 * 60)
+        let pastDayEvents = sorted.filter { $0.detectedAt >= dayAgo }
+
+        pastDayMotionCount = pastDayEvents.count
+        currentInactivity = sorted.last.map { now.timeIntervalSince($0.detectedAt) }
+        longestInactivityPastDay = Self.longestGap(in: pastDayEvents, fallback: currentInactivity)
+
+        if let lastMotion = sorted.last {
+            activityComparison = "Last motion \(Formatters.relative(lastMotion.detectedAt))"
+        } else {
+            activityComparison = "No activity has been recorded yet"
+        }
+    }
+
+    private static func longestGap(in events: [MotionEvent], fallback: TimeInterval?) -> TimeInterval? {
+        guard !events.isEmpty else { return fallback }
+        let longestGap = zip(events, events.dropFirst())
+            .map { $1.detectedAt.timeIntervalSince($0.detectedAt) }
+            .max() ?? 0
+        return max(longestGap, 0)
     }
 
     private func inactivityGap(after event: MotionEvent) -> String {
