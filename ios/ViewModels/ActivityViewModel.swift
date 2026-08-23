@@ -3,7 +3,7 @@ import Foundation
 @MainActor
 final class ActivityViewModel: ObservableObject {
     @Published var selectedDate = Date()
-    @Published var selectedRange: ActivityDateRange = .all
+    @Published var selectedRange: ActivityDateRange = .today
     @Published var selectedFilter: ActivityEventKind = .all
     @Published private(set) var events: [MotionEvent] = []
     @Published private(set) var alerts: [AlertEvent] = []
