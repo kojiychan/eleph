@@ -88,7 +88,7 @@ struct HomeView: View {
 
             dailySummary(summary, device: snapshot.device)
 
-            recentActivity(snapshot.motionEvents.prefix(3).map { $0 })
+            recentSessions(snapshot.motionEvents)
         }
     }
 
@@ -108,31 +108,98 @@ struct HomeView: View {
         }
     }
 
-    private func recentActivity(_ events: [MotionEvent]) -> some View {
-        VStack(alignment: .leading, spacing: 10) {
+    private func recentSessions(_ events: [MotionEvent]) -> some View {
+        let groups = recentSessionGroups(from: events)
+
+        return VStack(alignment: .leading, spacing: 10) {
             HStack {
-                Text("Recent Activity")
+                Text("Recent Sessions")
                     .font(.title2.weight(.bold))
                 Spacer()
-                Button("View All", action: viewAllActivity)
+                Button("View Activity", action: viewAllActivity)
             }
 
-            if events.isEmpty {
+            if groups.isEmpty {
                 EmptyStateView(title: "No motion recorded yet today", message: "Activity updates will appear here when the monitor detects motion.", systemImage: "clock.badge.questionmark")
                     .frame(minHeight: 170)
             } else {
-                VStack(spacing: 0) {
-                    ForEach(events) { event in
-                        MotionEventRow(event: event)
-                        if event.id != events.last?.id {
-                            Divider()
+                VStack(alignment: .leading, spacing: 14) {
+                    ForEach(groups, id: \.section) { group in
+                        VStack(alignment: .leading, spacing: 8) {
+                            HStack {
+                                Label(group.section.rawValue, systemImage: group.section.systemImage)
+                                    .font(.subheadline.weight(.semibold))
+                                Spacer()
+                                Text(group.sessions.count == 1 ? "1 session" : "\(group.sessions.count) sessions")
+                                    .font(.caption)
+                                    .foregroundStyle(.secondary)
+                                    .padding(.horizontal, 10)
+                                    .padding(.vertical, 5)
+                                    .background(AppColors.secondaryGroupedBackground, in: Capsule())
+                            }
+
+                            VStack(spacing: 0) {
+                                ForEach(group.sessions) { session in
+                                    HomeSessionRow(session: session)
+                                    if session.id != group.sessions.last?.id {
+                                        Divider()
+                                            .padding(.leading, 44)
+                                    }
+                                }
+                            }
+                            .padding(12)
+                            .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
                         }
                     }
                 }
-                .padding(14)
-                .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
             }
         }
+    }
+
+    private func recentSessionGroups(from events: [MotionEvent]) -> [(section: ActivityDaySection, sessions: [ActivitySession])] {
+        let todayEvents = events
+            .filter { Calendar.current.isDateInToday($0.detectedAt) }
+            .sorted { $0.detectedAt < $1.detectedAt }
+        let sessions = groupedSessions(from: todayEvents)
+
+        return ActivityDaySection.allCases
+            .compactMap { section -> (section: ActivityDaySection, sessions: [ActivitySession])? in
+                let sectionSessions = sessions
+                    .filter { section.contains($0.startedAt) }
+                    .sorted { $0.startedAt > $1.startedAt }
+                guard !sectionSessions.isEmpty else { return nil }
+                return (section, Array(sectionSessions.prefix(2)))
+            }
+            .sorted {
+                ($0.sessions.first?.startedAt ?? .distantPast) > ($1.sessions.first?.startedAt ?? .distantPast)
+            }
+            .prefix(2)
+            .map { ($0.section, $0.sessions) }
+    }
+
+    private func groupedSessions(from events: [MotionEvent]) -> [ActivitySession] {
+        guard var currentStart = events.first?.detectedAt else {
+            return []
+        }
+
+        let sessionGap: TimeInterval = 5 * 60
+        var currentEnd = currentStart
+        var motionCount = 0
+        var sessions: [ActivitySession] = []
+
+        for event in events {
+            if event.detectedAt.timeIntervalSince(currentEnd) > sessionGap {
+                sessions.append(ActivitySession(startedAt: currentStart, endedAt: currentEnd, motionCount: motionCount))
+                currentStart = event.detectedAt
+                motionCount = 0
+            }
+
+            currentEnd = event.detectedAt
+            motionCount += 1
+        }
+
+        sessions.append(ActivitySession(startedAt: currentStart, endedAt: currentEnd, motionCount: motionCount))
+        return sessions
     }
 
     private func greeting(name: String) -> String {
@@ -144,6 +211,50 @@ struct HomeView: View {
         default: prefix = "Good Evening"
         }
         return "\(prefix), \(name)"
+    }
+}
+
+private struct HomeSessionRow: View {
+    let session: ActivitySession
+
+    var body: some View {
+        HStack(spacing: 12) {
+            Image(systemName: iconName)
+                .font(.title3)
+                .foregroundStyle(.blue)
+                .frame(width: 28)
+
+            VStack(alignment: .leading, spacing: 3) {
+                Text("\(Formatters.time.string(from: session.startedAt)) - \(Formatters.time.string(from: session.endedAt))")
+                    .font(.subheadline.weight(.semibold))
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.8)
+                Text(session.label)
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+
+            Spacer()
+
+            Text(Formatters.duration(session.duration))
+                .font(.subheadline.weight(.semibold))
+
+            Image(systemName: "chevron.right")
+                .font(.caption)
+                .foregroundStyle(.tertiary)
+        }
+        .padding(.vertical, 10)
+    }
+
+    private var iconName: String {
+        switch session.label {
+        case "Longer activity":
+            return "clock.arrow.circlepath"
+        case "Quick visit":
+            return "figure.walk"
+        default:
+            return "circle.dotted"
+        }
     }
 }
 

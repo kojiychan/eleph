@@ -34,24 +34,31 @@ struct InactivityProgressBar: View {
                 let cautionX = min(Double(cautionThresholdHours) * 3600 / criticalSeconds, 1) * width
 
                 ZStack(alignment: .leading) {
-                    Capsule()
-                        .fill(.green.opacity(0.22))
-                    Capsule()
-                        .fill(.yellow.opacity(0.35))
-                        .frame(width: max(width - cautionX, 0))
-                        .offset(x: cautionX)
-                    Capsule()
-                        .fill(.red.opacity(0.35))
-                        .frame(width: max(width * 0.08, 10))
-                        .offset(x: width * 0.92)
+                    HStack(spacing: 0) {
+                        Capsule()
+                            .fill(.green)
+                            .frame(width: max(cautionX, 8))
+                        Rectangle()
+                            .fill(.yellow)
+                            .frame(width: max(width - cautionX - 12, 8))
+                        Capsule()
+                            .fill(.red)
+                            .frame(width: 12)
+                    }
+                    .opacity(0.82)
+                    .clipShape(Capsule())
 
                     Rectangle()
-                        .fill(.yellow)
+                        .fill(.primary.opacity(0.35))
                         .frame(width: 3)
                         .offset(x: max(cautionX - 1.5, 0))
 
                     Circle()
-                        .fill(.primary)
+                        .fill(markerColor)
+                        .overlay {
+                            Circle()
+                                .stroke(.white, lineWidth: 3)
+                        }
                         .frame(width: 16, height: 16)
                         .offset(x: max(min(currentX - 8, width - 16), 0))
                         .shadow(radius: 2)
@@ -85,6 +92,14 @@ struct InactivityProgressBar: View {
             return "\(Formatters.duration(critical - currentInactivity)) to critical"
         }
         return "Critical reached"
+    }
+
+    private var markerColor: Color {
+        let caution = Double(cautionThresholdHours) * 3600
+        let critical = Double(criticalThresholdHours) * 3600
+        if currentInactivity >= critical { return .red }
+        if currentInactivity >= caution { return .yellow }
+        return .green
     }
 }
 
