@@ -7,6 +7,7 @@ protocol DeviceRepository {
 
 protocol MotionEventRepository {
     func fetchMotionEvents(deviceID: String, date: Date?) async throws -> [MotionEvent]
+    func fetchMotionSessions(deviceID: String) async throws -> [MotionSession]
     func fetchDailySummaries(deviceID: String) async throws -> [DailyActivitySummary]
     func fetchTrend(deviceID: String) async throws -> [TrendDay]
 }

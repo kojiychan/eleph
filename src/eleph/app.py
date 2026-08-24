@@ -1,8 +1,12 @@
 from collections.abc import Iterator
 from contextlib import contextmanager
 
+from eleph import __version__
+from eleph.adapters.events.logging_activity import LoggingMotionActivityReporter
 from eleph.adapters.events.logging_sink import LoggingMotionEventSink
 from eleph.adapters.events.supabase import SupabaseMotionEventSink
+from eleph.adapters.events.supabase_device_status import SupabaseDeviceStatusReporter
+from eleph.adapters.events.supabase_motion_activity import SupabaseMotionActivityReporter
 from eleph.adapters.sensors.c4001_i2c import C4001I2cPresenceSensor
 from eleph.adapters.sensors.infrared_gpio import InfraredGpioSensor
 from eleph.adapters.sensors.simulated import SimulatedMotionSensor
@@ -11,7 +15,9 @@ from eleph.domain.events import MotionEvent
 from eleph.domain.motion import MotionSensor
 from eleph.domain.sinks import MotionEventSink
 from eleph.logging_config import configure_logging
+from eleph.services.device_heartbeat import DeviceHeartbeat, NullDeviceStatusReporter
 from eleph.services.motion_monitor import MotionMonitor
+from eleph.services.reliable_activity import ReliableMotionActivityReporter
 from eleph.services.reliable_sink import ReliableMotionEventSink
 
 
@@ -50,12 +56,36 @@ def build_event_sink(settings: Settings) -> MotionEventSink:
         url=settings.supabase_url or "",
         key=settings.supabase_key or "",
         table=settings.supabase_motion_table,
+        timeout_seconds=settings.supabase_timeout_seconds,
     )
     return ReliableMotionEventSink(
         primary=supabase_sink,
         fallback=logging_sink,
         max_queue_size=settings.event_queue_size,
     )
+
+
+def post_device_heartbeat(settings: Settings, *, strict_upload: bool = False) -> None:
+    configure_logging(settings.log_level)
+    if not settings.supabase_enabled:
+        return
+
+    reporter = SupabaseDeviceStatusReporter(
+        url=settings.supabase_url or "",
+        key=settings.supabase_key or "",
+        device_id=settings.device_id,
+        firmware_version=__version__,
+        table=settings.supabase_devices_table,
+        timeout_seconds=settings.supabase_timeout_seconds,
+    )
+    if strict_upload:
+        reporter.report_online()
+        return
+
+    DeviceHeartbeat(
+        reporter=reporter,
+        interval_seconds=settings.heartbeat_interval_seconds,
+    ).report_startup()
 
 
 def post_fake_motion(settings: Settings, *, strict_upload: bool = False) -> MotionEvent:
@@ -76,6 +106,7 @@ def post_fake_motion(settings: Settings, *, strict_upload: bool = False) -> Moti
             url=settings.supabase_url or "",
             key=settings.supabase_key or "",
             table=settings.supabase_motion_table,
+            timeout_seconds=settings.supabase_timeout_seconds,
         ).record_motion(event)
         return event
 
@@ -111,11 +142,46 @@ def metadata_for(settings: Settings) -> dict[str, object]:
     return {}
 
 
+def build_device_heartbeat(settings: Settings) -> DeviceHeartbeat | NullDeviceStatusReporter:
+    if not settings.supabase_enabled:
+        return NullDeviceStatusReporter()
+
+    return DeviceHeartbeat(
+        reporter=SupabaseDeviceStatusReporter(
+            url=settings.supabase_url or "",
+            key=settings.supabase_key or "",
+            device_id=settings.device_id,
+            firmware_version=__version__,
+            table=settings.supabase_devices_table,
+            timeout_seconds=settings.supabase_timeout_seconds,
+        ),
+        interval_seconds=settings.heartbeat_interval_seconds,
+    )
+
+
+def build_motion_activity_reporter(settings: Settings) -> ReliableMotionActivityReporter | None:
+    if not settings.supabase_enabled:
+        return None
+
+    return ReliableMotionActivityReporter(
+        primary=SupabaseMotionActivityReporter(
+            url=settings.supabase_url or "",
+            key=settings.supabase_key or "",
+            idle_timeout_seconds=settings.motion_session_idle_timeout_seconds,
+            timeout_seconds=settings.supabase_timeout_seconds,
+        ),
+        fallback=LoggingMotionActivityReporter(),
+        max_queue_size=settings.event_queue_size,
+    )
+
+
 @contextmanager
 def build_motion_monitor(settings: Settings) -> Iterator[MotionMonitor]:
     configure_logging(settings.log_level)
     sensor = build_sensor(settings)
     sink = build_event_sink(settings)
+    heartbeat = build_device_heartbeat(settings)
+    activity_reporter = build_motion_activity_reporter(settings)
     with sensor:
         yield MotionMonitor(
             sensor=sensor,
@@ -126,4 +192,8 @@ def build_motion_monitor(settings: Settings) -> Iterator[MotionMonitor]:
             poll_interval_seconds=settings.poll_interval_seconds,
             debounce_seconds=settings.debounce_ms / 1000,
             cooldown_seconds=settings.cooldown_seconds,
+            device_status=heartbeat,
+            activity_reporter=activity_reporter,
+            motion_event_cooldown_seconds=settings.motion_event_cooldown_seconds,
+            motion_session_idle_timeout_seconds=settings.motion_session_idle_timeout_seconds,
         )

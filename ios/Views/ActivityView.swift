@@ -18,14 +18,14 @@ struct ActivityView: View {
                         ErrorStateView(title: "Unable to Load Activity", message: message) {
                             Task { await viewModel.load() }
                         }
-                    case .loaded(let items):
+                    case .loaded:
                         switch viewModel.selectedMode {
                         case .day:
                             dayView
                         case .week:
                             weekView
-                        case .all:
-                            allHistoryView(items)
+                        case .patterns:
+                            patternsView
                         }
                     }
                 }
@@ -170,24 +170,114 @@ struct ActivityView: View {
         }
     }
 
-    private func allHistoryView(_ items: [ActivityTimelineItem]) -> some View {
-        VStack(alignment: .leading, spacing: 16) {
-            lifeCheckStrip
-            Text("All Activity")
-                .font(.title2.weight(.bold))
+    private var patternsView: some View {
+        let summary = viewModel.patternSummary()
 
-            if items.isEmpty {
-                EmptyStateView(title: "No Events", message: "No activity is available yet.", systemImage: "line.3.horizontal.decrease.circle")
-                    .frame(minHeight: 180)
+        return VStack(alignment: .leading, spacing: 16) {
+            lifeCheckStrip
+
+            VStack(alignment: .leading, spacing: 4) {
+                Text("Routine Patterns")
+                    .font(.title2.weight(.bold))
+                Text(patternsSubtitle(summary))
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
+            }
+
+            LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 12) {
+                PatternMetricCard(
+                    title: "Avg visits / day",
+                    value: averageVisitsText(summary.averageVisitsPerDay),
+                    detail: "\(summary.totalSessionCount) sessions tracked",
+                    systemImage: "figure.walk"
+                )
+                PatternMetricCard(
+                    title: "Typical first activity",
+                    value: timeText(forMinute: summary.typicalFirstActivityMinute),
+                    detail: "Daily routine start",
+                    systemImage: "sunrise"
+                )
+                PatternMetricCard(
+                    title: "Typical last activity",
+                    value: timeText(forMinute: summary.typicalLastActivityMinute),
+                    detail: "Daily routine end",
+                    systemImage: "moon"
+                )
+                PatternMetricCard(
+                    title: "Avg visit length",
+                    value: durationText(summary.averageSessionDuration),
+                    detail: "Across visible history",
+                    systemImage: "timer"
+                )
+            }
+
+            routineWindows(summary)
+            visitPatterns(summary)
+            recentPatternSessions
+        }
+    }
+
+    private func routineWindows(_ summary: ActivityPatternSummary) -> some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text("Routine Windows")
+                .font(.headline)
+
+            VStack(spacing: 0) {
+                PatternRow(
+                    title: "Most active part of day",
+                    value: summary.mostActiveSection?.rawValue ?? "Not enough data",
+                    systemImage: summary.mostActiveSection?.systemImage ?? "clock"
+                )
+                Divider()
+                PatternRow(
+                    title: "Most active day",
+                    value: summary.mostActiveWeekday ?? "Not enough data",
+                    systemImage: "calendar"
+                )
+                Divider()
+                PatternRow(
+                    title: "Longer activity range",
+                    value: longerActivityRangeText(summary.longerActivityRange),
+                    systemImage: "clock.arrow.circlepath"
+                )
+            }
+            .padding(.horizontal, 12)
+            .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+        }
+    }
+
+    private func visitPatterns(_ summary: ActivityPatternSummary) -> some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text("Changes From Usual")
+                .font(.headline)
+
+            VStack(alignment: .leading, spacing: 12) {
+                Label(patternInsight(summary), systemImage: "chart.line.uptrend.xyaxis")
+                    .font(.subheadline.weight(.semibold))
+                Text("Patterns are based on recorded bathroom activity sessions. Labels stay cautious because Eleph tracks motion, not video or audio.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+            .padding()
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+        }
+    }
+
+    private var recentPatternSessions: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text("Recent Sessions")
+                .font(.headline)
+
+            let sessions = viewModel.recentPatternSessions()
+            if sessions.isEmpty {
+                EmptyStateView(title: "No Pattern Data", message: "Routine patterns will appear after activity is recorded.", systemImage: "chart.line.uptrend.xyaxis")
+                    .frame(minHeight: 160)
             } else {
-                ForEach(viewModel.groupedTimelineItems(items), id: \.title) { group in
-                    VStack(alignment: .leading, spacing: 10) {
-                        Text(group.title)
-                            .font(.headline)
-                        ActivityTimeline(items: group.items)
+                VStack(spacing: 10) {
+                    ForEach(sessions) { session in
+                        ActivitySessionRow(session: session)
                     }
-                    .padding(16)
-                    .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
                 }
             }
         }
@@ -340,6 +430,99 @@ struct ActivityView: View {
 
     private func dayListTitle(_ date: Date) -> String {
         "\(relativeDayLabel(date)), \(shortDate.string(from: date))"
+    }
+
+    private func patternsSubtitle(_ summary: ActivityPatternSummary) -> String {
+        guard summary.activeDayCount > 0 else {
+            return "Patterns will appear as activity history builds."
+        }
+        return "Based on \(summary.activeDayCount) active days"
+    }
+
+    private func averageVisitsText(_ average: Double) -> String {
+        guard average > 0 else { return "No data" }
+        return String(format: "%.1f", average)
+    }
+
+    private func timeText(forMinute minute: Int?) -> String {
+        guard let minute else { return "No data" }
+        let hour = minute / 60
+        let remainingMinute = minute % 60
+        let date = Calendar.current.date(from: DateComponents(hour: hour, minute: remainingMinute)) ?? Date()
+        return Formatters.time.string(from: date)
+    }
+
+    private func durationText(_ duration: TimeInterval?) -> String {
+        guard let duration else { return "No data" }
+        return Formatters.duration(duration)
+    }
+
+    private func longerActivityRangeText(_ range: ClosedRange<TimeInterval>?) -> String {
+        guard let range else { return "No longer activity yet" }
+        return "\(Formatters.duration(range.lowerBound)) - \(Formatters.duration(range.upperBound))"
+    }
+
+    private func patternInsight(_ summary: ActivityPatternSummary) -> String {
+        guard summary.totalSessionCount > 0 else {
+            return "No routine baseline yet"
+        }
+        if summary.averageVisitsPerDay < 2 {
+            return "Activity is still building a routine baseline"
+        }
+        return "Activity is being compared with the usual routine"
+    }
+}
+
+private struct PatternMetricCard: View {
+    let title: String
+    let value: String
+    let detail: String
+    let systemImage: String
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            Image(systemName: systemImage)
+                .font(.title3)
+                .foregroundStyle(.blue)
+            Text(value)
+                .font(.title3.weight(.bold))
+                .lineLimit(1)
+                .minimumScaleFactor(0.75)
+            VStack(alignment: .leading, spacing: 2) {
+                Text(title)
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(.primary)
+                Text(detail)
+                    .font(.caption2)
+                    .foregroundStyle(.secondary)
+                    .lineLimit(2)
+            }
+        }
+        .padding(14)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+    }
+}
+
+private struct PatternRow: View {
+    let title: String
+    let value: String
+    let systemImage: String
+
+    var body: some View {
+        HStack(spacing: 12) {
+            Image(systemName: systemImage)
+                .foregroundStyle(.blue)
+                .frame(width: 24)
+            Text(title)
+                .font(.subheadline)
+            Spacer()
+            Text(value)
+                .font(.subheadline.weight(.semibold))
+                .foregroundStyle(.secondary)
+                .multilineTextAlignment(.trailing)
+        }
+        .padding(.vertical, 12)
     }
 }
 

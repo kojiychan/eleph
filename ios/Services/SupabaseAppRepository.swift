@@ -76,6 +76,24 @@ actor SupabaseAppRepository: DeviceRepository, MotionEventRepository, AlertRepos
         }
     }
 
+    func fetchMotionSessions(deviceID: String) async throws -> [MotionSession] {
+        do {
+            let rows: [SupabaseMotionSessionRow] = try await client
+                .from("motion_sessions")
+                .select()
+                .eq("device_id", value: deviceID)
+                .order("started_at", ascending: false)
+                .limit(500)
+                .execute()
+                .value
+
+            return rows.map { $0.toMotionSession() }
+        } catch {
+            // Some beta databases may not have motion_sessions deployed yet.
+            return []
+        }
+    }
+
     func fetchDailySummaries(deviceID: String) async throws -> [DailyActivitySummary] {
         let events = try await fetchMotionEvents(deviceID: deviceID, date: nil)
         return (0..<7).compactMap { offset in
@@ -220,6 +238,32 @@ private struct SupabaseMotionEventRow: Decodable {
 
     func toMotionEvent() -> MotionEvent {
         MotionEvent(id: id, deviceID: deviceID, detectedAt: detectedAt)
+    }
+}
+
+private struct SupabaseMotionSessionRow: Decodable {
+    let id: UUID
+    let deviceID: String
+    let startedAt: Date
+    let endedAt: Date?
+    let motionCount: Int?
+
+    enum CodingKeys: String, CodingKey {
+        case id
+        case deviceID = "device_id"
+        case startedAt = "started_at"
+        case endedAt = "ended_at"
+        case motionCount = "motion_count"
+    }
+
+    func toMotionSession() -> MotionSession {
+        MotionSession(
+            id: id,
+            deviceID: deviceID,
+            startedAt: startedAt,
+            endedAt: endedAt,
+            motionCount: motionCount ?? 1
+        )
     }
 }
 

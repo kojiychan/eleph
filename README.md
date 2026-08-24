@@ -136,6 +136,8 @@ Environment variables are used for deployment-friendly configuration:
 - `ELEPH_POLL_INTERVAL_SECONDS`: polling interval for motion checks. Defaults to `1.0`.
 - `ELEPH_EVENT_QUEUE_SIZE`: maximum in-memory retry queue size. Defaults to `100`.
 - `ELEPH_LOG_LEVEL`: Python logging level. Defaults to `INFO`.
+- `ELEPH_MOTION_EVENT_COOLDOWN_SECONDS`: minimum seconds between inserted `motion_events` rows during continuous motion. Defaults to `180`.
+- `ELEPH_MOTION_SESSION_IDLE_TIMEOUT_SECONDS`: seconds without detected motion before an open motion session is ended. Defaults to `180`.
 - `ELEPH_C4001_I2C_BUS`: Raspberry Pi I2C bus. Defaults to `1`.
 - `ELEPH_C4001_I2C_ADDRESS`: C4001 I2C address. Defaults to `0x2A`.
 - `ELEPH_C4001_MIN_RANGE_CM`: C4001 minimum detection range. Defaults to `30`.
@@ -149,19 +151,24 @@ Environment variables are used for deployment-friendly configuration:
 - `SUPABASE_URL`: Supabase project URL.
 - `SUPABASE_KEY`: Supabase credential used by the Raspberry Pi process.
 - `SUPABASE_MOTION_TABLE`: table for motion events. Defaults to `motion_events`.
+- `SUPABASE_DEVICES_TABLE`: table for device heartbeat status. Defaults to `devices`.
+- `ELEPH_HEARTBEAT_INTERVAL_SECONDS`: seconds between online heartbeats. Defaults to `60`.
+- `ELEPH_SUPABASE_TIMEOUT_SECONDS`: short HTTP timeout for Supabase calls. Defaults to `3`.
 
 Copy `.env.example` to a local `.env` file if you want a reference, but do not commit `.env` or real credentials.
 
-## Motion Events
+## Motion Events And Sessions
 
-Eleph records one event only when the sensor transitions from inactive to active:
+Eleph keeps `devices.last_motion_at` fresh every time motion is observed, but it throttles `motion_events` so a long bathroom visit does not create hundreds of rows.
 
 ```text
-inactive -> active: insert motion_detected
-active -> active: do nothing
-active -> inactive: update internal state
-inactive -> inactive: do nothing
+first motion after inactivity: update device, start motion session, insert motion_detected
+continuous motion under 3 minutes: update device and session, skip motion_detected
+continuous motion after 3 minutes: update device and session, insert another motion_detected
+no motion for 3 minutes: end the open motion session
 ```
+
+The app should use `devices.last_motion_at` for life-check recency and `motion_sessions` for bathroom visit history. `motion_events` is now a lower-volume audit/timeline table rather than a row for every sensor poll.
 
 Example payload:
 
@@ -196,6 +203,50 @@ Run the SQL in `supabase/schema.sql` from the Supabase SQL editor before testing
 The Raspberry Pi prototype reads `SUPABASE_KEY` from the environment and sends inserts through Supabase REST. For an early trusted-device prototype, this may be an anon key if row-level security allows only the intended insert shape, or a more privileged key kept only on the Pi. A service-role key must never be shipped in a future iOS application. The Supabase client is isolated behind `MotionEventSink` so authentication can be changed later without rewriting sensor or monitor logic.
 
 Failed uploads are logged and retried with bounded exponential backoff through a small in-memory queue. Event timestamps are created when motion is detected, not when a retry eventually succeeds.
+
+## Device Heartbeat
+
+The Pi monitor sends a heartbeat to `public.devices` on startup, every 60 seconds while running, and whenever motion is detected. Heartbeats upsert:
+
+- `device_id`
+- `connection_status='online'`
+- `last_seen_at`
+- `firmware_version`
+- `ip_address`, when the Pi can determine it locally
+
+Motion detections also update `devices.last_motion_at` to the motion event timestamp. Supabase has an `after insert` trigger on `motion_events` that mirrors this update, so `last_motion_at` still advances when a motion row is inserted by a retry or future firmware path.
+
+The iOS app should infer status from `last_seen_at`:
+
+- Online: less than 3 minutes old.
+- Stale: 3-10 minutes old.
+- Offline: more than 10 minutes old or missing.
+
+Send one heartbeat without starting the monitor:
+
+```bash
+PYTHONPATH=src python3 -m eleph heartbeat \
+  --device-id bathroom-monitor-001 \
+  --strict-upload
+```
+
+Verify in Supabase:
+
+```sql
+select * from public.devices where device_id = 'bathroom-monitor-001';
+
+select *
+from public.motion_events
+where device_id = 'bathroom-monitor-001'
+order by detected_at desc
+limit 20;
+
+select *
+from public.motion_sessions
+where device_id = 'bathroom-monitor-001'
+order by started_at desc
+limit 20;
+```
 
 ## C4001 mmWave Sensor
 

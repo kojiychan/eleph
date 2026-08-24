@@ -4,7 +4,7 @@ import signal
 from threading import Event
 from collections.abc import Sequence
 
-from eleph.app import build_motion_monitor, post_fake_motion
+from eleph.app import build_motion_monitor, post_device_heartbeat, post_fake_motion
 from eleph.config import Settings, parse_bool
 
 LOGGER = logging.getLogger(__name__)
@@ -29,6 +29,17 @@ def build_parser() -> argparse.ArgumentParser:
         "--strict-upload",
         action="store_true",
         help="Fail if the Supabase upload fails instead of falling back to local logging.",
+    )
+
+    heartbeat_parser = subparsers.add_parser(
+        "heartbeat",
+        help="Post one device heartbeat for connectivity testing.",
+    )
+    heartbeat_parser.add_argument("--device-id", default=None, help="Stable device identifier.")
+    heartbeat_parser.add_argument(
+        "--strict-upload",
+        action="store_true",
+        help="Fail if the Supabase heartbeat fails instead of logging and continuing.",
     )
 
     subparsers.add_parser("doctor", help="Print runtime configuration.")
@@ -104,6 +115,12 @@ def main(argv: Sequence[str] | None = None) -> int:
         settings = settings.with_overrides(device_id=args.device_id)
         event = post_fake_motion(settings, strict_upload=args.strict_upload)
         LOGGER.info("fake motion event emitted payload=%s", event.to_supabase_payload())
+        return 0
+
+    if args.command == "heartbeat":
+        settings = settings.with_overrides(device_id=args.device_id)
+        post_device_heartbeat(settings, strict_upload=args.strict_upload)
+        LOGGER.info("device heartbeat emitted device_id=%s", settings.device_id)
         return 0
 
     parser.error(f"Unhandled command: {args.command}")

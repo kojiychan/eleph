@@ -31,7 +31,12 @@ class Settings:
     supabase_url: str | None = None
     supabase_key: str | None = None
     supabase_motion_table: str = "motion_events"
+    supabase_devices_table: str = "devices"
     event_queue_size: int = 100
+    heartbeat_interval_seconds: float = 60.0
+    motion_event_cooldown_seconds: float = 180.0
+    motion_session_idle_timeout_seconds: float = 180.0
+    supabase_timeout_seconds: float = 3.0
     c4001_i2c_bus: int = 1
     c4001_i2c_address: int = 0x2A
     c4001_min_range_cm: int = 30
@@ -68,7 +73,28 @@ class Settings:
             supabase_motion_table=os.getenv(
                 "SUPABASE_MOTION_TABLE", cls.supabase_motion_table
             ),
+            supabase_devices_table=os.getenv(
+                "SUPABASE_DEVICES_TABLE", cls.supabase_devices_table
+            ),
             event_queue_size=int(os.getenv("ELEPH_EVENT_QUEUE_SIZE", str(cls.event_queue_size))),
+            heartbeat_interval_seconds=float(
+                os.getenv("ELEPH_HEARTBEAT_INTERVAL_SECONDS", str(cls.heartbeat_interval_seconds))
+            ),
+            motion_event_cooldown_seconds=float(
+                os.getenv(
+                    "ELEPH_MOTION_EVENT_COOLDOWN_SECONDS",
+                    str(cls.motion_event_cooldown_seconds),
+                )
+            ),
+            motion_session_idle_timeout_seconds=float(
+                os.getenv(
+                    "ELEPH_MOTION_SESSION_IDLE_TIMEOUT_SECONDS",
+                    str(cls.motion_session_idle_timeout_seconds),
+                )
+            ),
+            supabase_timeout_seconds=float(
+                os.getenv("ELEPH_SUPABASE_TIMEOUT_SECONDS", str(cls.supabase_timeout_seconds))
+            ),
             c4001_i2c_bus=int(os.getenv("ELEPH_C4001_I2C_BUS", str(cls.c4001_i2c_bus))),
             c4001_i2c_address=int(
                 os.getenv("ELEPH_C4001_I2C_ADDRESS", hex(cls.c4001_i2c_address)), 0
@@ -142,7 +168,12 @@ class Settings:
             supabase_url=self.supabase_url,
             supabase_key=self.supabase_key,
             supabase_motion_table=self.supabase_motion_table,
+            supabase_devices_table=self.supabase_devices_table,
             event_queue_size=self.event_queue_size,
+            heartbeat_interval_seconds=self.heartbeat_interval_seconds,
+            motion_event_cooldown_seconds=self.motion_event_cooldown_seconds,
+            motion_session_idle_timeout_seconds=self.motion_session_idle_timeout_seconds,
+            supabase_timeout_seconds=self.supabase_timeout_seconds,
             c4001_i2c_bus=self.c4001_i2c_bus,
             c4001_i2c_address=self.c4001_i2c_address,
             c4001_min_range_cm=self.c4001_min_range_cm,
@@ -182,7 +213,12 @@ class Settings:
                 f"supabase_url_configured={self.supabase_url is not None}",
                 f"supabase_key_configured={self.supabase_key is not None}",
                 f"supabase_motion_table={self.supabase_motion_table}",
+                f"supabase_devices_table={self.supabase_devices_table}",
                 f"event_queue_size={self.event_queue_size}",
+                f"heartbeat_interval_seconds={self.heartbeat_interval_seconds}",
+                f"motion_event_cooldown_seconds={self.motion_event_cooldown_seconds}",
+                f"motion_session_idle_timeout_seconds={self.motion_session_idle_timeout_seconds}",
+                f"supabase_timeout_seconds={self.supabase_timeout_seconds}",
                 f"c4001_i2c_bus={self.c4001_i2c_bus}",
                 f"c4001_i2c_address=0x{self.c4001_i2c_address:02x}",
                 f"c4001_min_range_cm={self.c4001_min_range_cm}",

@@ -98,6 +98,14 @@ struct MotionEvent: Identifiable, Codable, Hashable {
     let detectedAt: Date
 }
 
+struct MotionSession: Identifiable, Codable, Hashable {
+    let id: UUID
+    let deviceID: String
+    let startedAt: Date
+    let endedAt: Date?
+    let motionCount: Int
+}
+
 struct AlertEvent: Identifiable, Codable, Hashable {
     let id: UUID
     let deviceID: String

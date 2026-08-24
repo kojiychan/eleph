@@ -63,6 +63,11 @@ actor MockAppRepository: DeviceRepository, MotionEventRepository, AlertRepositor
         }
     }
 
+    func fetchMotionSessions(deviceID: String) async throws -> [MotionSession] {
+        try await Task.sleep(for: .milliseconds(120))
+        return []
+    }
+
     func fetchDailySummaries(deviceID: String) async throws -> [DailyActivitySummary] {
         try await Task.sleep(for: .milliseconds(120))
         return snapshot.summaries

@@ -17,6 +17,7 @@ final class ActivityViewModel: ObservableObject {
 
     private let services: AppServiceContainer
     private var allEvents: [MotionEvent] = []
+    private var allSessions: [MotionSession] = []
 
     init(services: AppServiceContainer) {
         self.services = services
@@ -28,11 +29,13 @@ final class ActivityViewModel: ObservableObject {
         do {
             let device = try await services.deviceRepository.fetchDevice()
             async let loadedEvents = services.motionRepository.fetchMotionEvents(deviceID: device.id, date: nil)
+            async let loadedSessions = services.motionRepository.fetchMotionSessions(deviceID: device.id)
             async let loadedSummaries = services.motionRepository.fetchDailySummaries(deviceID: device.id)
             async let loadedAlerts = services.alertRepository.fetchAlerts(deviceID: device.id)
             async let loadedTrends = services.motionRepository.fetchTrend(deviceID: device.id)
             let allEvents = try await loadedEvents
             self.allEvents = allEvents
+            allSessions = try await loadedSessions
             deviceStatus = device.connectionStatus
             updateOverview(from: allEvents)
             events = eventsForSelectedMode()
@@ -103,12 +106,50 @@ final class ActivityViewModel: ObservableObject {
     }
 
     func sessions(on date: Date) -> [ActivitySession] {
+        let sessionRows = allSessions.filter { Calendar.current.isDate($0.startedAt, inSameDayAs: date) }
+        if !sessionRows.isEmpty {
+            return sessionRows
+                .map { ActivitySession(motionSession: $0) }
+                .sorted { $0.startedAt < $1.startedAt }
+        }
+
         let calendar = Calendar.current
         let dayEvents = allEvents
             .filter { calendar.isDate($0.detectedAt, inSameDayAs: date) }
             .sorted { $0.detectedAt < $1.detectedAt }
 
         return Self.groupSessions(from: dayEvents)
+    }
+
+    func patternSummary() -> ActivityPatternSummary {
+        let sessions = activitySessions()
+        let groupedByDay = Dictionary(grouping: sessions) { Calendar.current.startOfDay(for: $0.startedAt) }
+        let activeDays = groupedByDay.keys.count
+        let averageVisits = activeDays == 0 ? 0 : Double(sessions.count) / Double(activeDays)
+        let firstActivity = averageMinute(of: groupedByDay.values.compactMap { $0.min { $0.startedAt < $1.startedAt }?.startedAt })
+        let lastActivity = averageMinute(of: groupedByDay.values.compactMap { $0.max { $0.startedAt < $1.startedAt }?.startedAt })
+        let averageDuration = sessions.isEmpty ? nil : sessions.reduce(0) { $0 + $1.duration } / Double(sessions.count)
+        let longerActivities = sessions.filter { $0.duration >= 20 * 60 }
+        let mostActiveWeekday = weekdayWithMostSessions(from: sessions)
+        let mostActiveSection = ActivityDaySection.allCases.max { left, right in
+            sessions.filter { left.contains($0.startedAt) }.count < sessions.filter { right.contains($0.startedAt) }.count
+        }
+
+        return ActivityPatternSummary(
+            averageVisitsPerDay: averageVisits,
+            typicalFirstActivityMinute: firstActivity,
+            typicalLastActivityMinute: lastActivity,
+            averageSessionDuration: averageDuration,
+            longerActivityRange: durationRange(for: longerActivities),
+            mostActiveWeekday: mostActiveWeekday,
+            mostActiveSection: mostActiveSection,
+            activeDayCount: activeDays,
+            totalSessionCount: sessions.count
+        )
+    }
+
+    func recentPatternSessions(limit: Int = 6) -> [ActivitySession] {
+        Array(activitySessions().sorted { $0.startedAt > $1.startedAt }.prefix(limit))
     }
 
     func weeklySessionCount() -> Int {
@@ -141,7 +182,7 @@ final class ActivityViewModel: ObservableObject {
 
     private func eventsForSelectedMode() -> [MotionEvent] {
         switch selectedMode {
-        case .all:
+        case .patterns:
             return allEvents
         case .day:
             return allEvents.filter { Calendar.current.isDate($0.detectedAt, inSameDayAs: selectedDate) }
@@ -152,6 +193,45 @@ final class ActivityViewModel: ObservableObject {
             }
             return allEvents.filter { $0.detectedAt >= firstDay && $0.detectedAt < end }
         }
+    }
+
+    private func activitySessions() -> [ActivitySession] {
+        if !allSessions.isEmpty {
+            return allSessions.map { ActivitySession(motionSession: $0) }
+                .sorted { $0.startedAt < $1.startedAt }
+        }
+
+        let grouped = Dictionary(grouping: allEvents) { Calendar.current.startOfDay(for: $0.detectedAt) }
+        return grouped.values
+            .flatMap { Self.groupSessions(from: $0.sorted { $0.detectedAt < $1.detectedAt }) }
+            .sorted { $0.startedAt < $1.startedAt }
+    }
+
+    private func averageMinute(of dates: [Date]) -> Int? {
+        guard !dates.isEmpty else { return nil }
+        let total = dates.reduce(0) { partial, date in
+            let components = Calendar.current.dateComponents([.hour, .minute], from: date)
+            return partial + (components.hour ?? 0) * 60 + (components.minute ?? 0)
+        }
+        return total / dates.count
+    }
+
+    private func durationRange(for sessions: [ActivitySession]) -> ClosedRange<TimeInterval>? {
+        guard let min = sessions.map(\.duration).min(),
+              let max = sessions.map(\.duration).max() else {
+            return nil
+        }
+        return min...max
+    }
+
+    private func weekdayWithMostSessions(from sessions: [ActivitySession]) -> String? {
+        let grouped = Dictionary(grouping: sessions) {
+            Calendar.current.component(.weekday, from: $0.startedAt)
+        }
+        guard let weekday = grouped.max(by: { $0.value.count < $1.value.count })?.key else {
+            return nil
+        }
+        return Calendar.current.weekdaySymbols[weekday - 1]
     }
 
     private static func groupSessions(from events: [MotionEvent]) -> [ActivitySession] {
@@ -256,7 +336,7 @@ enum ActivityDateRange: String, CaseIterable, Identifiable {
 enum ActivityDisplayMode: String, CaseIterable, Identifiable {
     case day = "Day"
     case week = "Week"
-    case all = "All"
+    case patterns = "Patterns"
 
     var id: String { rawValue }
 }
@@ -266,6 +346,18 @@ struct ActivitySession: Identifiable, Hashable {
     let startedAt: Date
     let endedAt: Date
     let motionCount: Int
+
+    init(startedAt: Date, endedAt: Date, motionCount: Int) {
+        self.startedAt = startedAt
+        self.endedAt = endedAt
+        self.motionCount = motionCount
+    }
+
+    init(motionSession: MotionSession) {
+        startedAt = motionSession.startedAt
+        endedAt = motionSession.endedAt ?? motionSession.startedAt
+        motionCount = motionSession.motionCount
+    }
 
     var duration: TimeInterval {
         max(endedAt.timeIntervalSince(startedAt), 60)
@@ -280,6 +372,18 @@ struct ActivitySession: Identifiable, Hashable {
         }
         return "Routine activity"
     }
+}
+
+struct ActivityPatternSummary {
+    let averageVisitsPerDay: Double
+    let typicalFirstActivityMinute: Int?
+    let typicalLastActivityMinute: Int?
+    let averageSessionDuration: TimeInterval?
+    let longerActivityRange: ClosedRange<TimeInterval>?
+    let mostActiveWeekday: String?
+    let mostActiveSection: ActivityDaySection?
+    let activeDayCount: Int
+    let totalSessionCount: Int
 }
 
 enum ActivityDaySection: String, CaseIterable, Identifiable {
