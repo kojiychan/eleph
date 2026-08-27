@@ -1,5 +1,4 @@
 import {
-  assertAdminRequest,
   buildQrImages,
   buildQrUrl,
   ensureUniqueDeviceDisplayName,
@@ -92,15 +91,6 @@ const isUniqueViolation = (error) =>
   error?.message?.includes("23505") || error?.message?.toLowerCase().includes("duplicate key");
 
 export default async function handler(request, response) {
-  const auth = assertAdminRequest({
-    enabled: process.env.ENABLE_ADMIN_DEVICE_PROVISIONING,
-  });
-
-  if (!auth.ok) {
-    json(response, auth.status, { error: auth.message });
-    return;
-  }
-
   try {
     if (request.method === "GET") {
       const [devices, existingDeviceNames] = await Promise.all([

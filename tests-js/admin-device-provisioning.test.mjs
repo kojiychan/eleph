@@ -4,7 +4,6 @@ import test from "node:test";
 
 import handler from "../api/admin/devices.js";
 import {
-  assertAdminRequest,
   buildQrUrl,
   ensureUniqueDeviceDisplayName,
   generateClaimToken,
@@ -73,45 +72,18 @@ test("duplicate device display names are replaced with the next numbered device 
   assert.equal(ensureUniqueDeviceDisplayName("Kitchen Monitor", devices), "Kitchen Monitor");
 });
 
-test("admin guard blocks when feature flag is missing", () => {
-  assert.deepEqual(
-    assertAdminRequest({
-      enabled: "false",
-    }),
-    {
-      ok: false,
-      status: 404,
-      message: "Admin device provisioning is disabled.",
-    },
-  );
-});
-
-test("admin guard allows requests without an admin key when enabled", () => {
-  assert.deepEqual(
-    assertAdminRequest({
-      enabled: "true",
-    }),
-    { ok: true },
-  );
-});
-
-test("admin API rejects when provisioning flag is missing", async () => {
-  const previousFlag = process.env.ENABLE_ADMIN_DEVICE_PROVISIONING;
-  process.env.ENABLE_ADMIN_DEVICE_PROVISIONING = "false";
-
+test("admin API rejects unsupported methods without an admin key or feature flag", async () => {
   const response = createMockResponse();
   await handler(
     {
-      method: "GET",
+      method: "PATCH",
       headers: {},
     },
     response,
   );
 
-  assert.equal(response.statusCode, 404);
-  assert.equal(JSON.parse(response.body).error, "Admin device provisioning is disabled.");
-
-  restoreEnv("ENABLE_ADMIN_DEVICE_PROVISIONING", previousFlag);
+  assert.equal(response.statusCode, 405);
+  assert.equal(JSON.parse(response.body).error, "Method not allowed");
 });
 
 function createMockResponse() {
@@ -125,12 +97,4 @@ function createMockResponse() {
     response.emit("finish");
   };
   return response;
-}
-
-function restoreEnv(key, value) {
-  if (value === undefined) {
-    delete process.env[key];
-  } else {
-    process.env[key] = value;
-  }
 }

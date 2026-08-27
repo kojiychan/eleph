@@ -38,7 +38,6 @@ Required server-side variables:
 ```text
 SUPABASE_URL
 SUPABASE_SERVICE_ROLE_KEY
-ENABLE_ADMIN_DEVICE_PROVISIONING=true
 CLAIM_TOKEN_PEPPER
 DEVICE_QR_BASE_URL=https://eleph.app
 ```
@@ -49,7 +48,6 @@ DEVICE_QR_BASE_URL=https://eleph.app
 
 The current admin protection is intentionally temporary:
 
-- `ENABLE_ADMIN_DEVICE_PROVISIONING=true` enables the API.
 - No admin key is required while this private tool is in early manufacturing use.
 - Proper authenticated admin role authorization is still required before production.
 
