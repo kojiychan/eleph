@@ -39,29 +39,31 @@ Required server-side variables:
 SUPABASE_URL
 SUPABASE_SERVICE_ROLE_KEY
 ENABLE_ADMIN_DEVICE_PROVISIONING=true
-ADMIN_DEVICE_PROVISIONING_KEY
 CLAIM_TOKEN_PEPPER
 DEVICE_QR_BASE_URL=https://eleph.app
 ```
 
-`SUPABASE_SERVICE_ROLE_KEY`, `ADMIN_DEVICE_PROVISIONING_KEY`, and `CLAIM_TOKEN_PEPPER` must
-never be exposed in browser config.
+`SUPABASE_SERVICE_ROLE_KEY` and `CLAIM_TOKEN_PEPPER` must never be exposed in browser config.
 
 ## Temporary Security
 
 The current admin protection is intentionally temporary:
 
 - `ENABLE_ADMIN_DEVICE_PROVISIONING=true` enables the API.
-- `ADMIN_DEVICE_PROVISIONING_KEY` is submitted from the admin page and checked server-side.
+- No admin key is required while this private tool is in early manufacturing use.
 - Proper authenticated admin role authorization is still required before production.
 
 The serverless API does the sensitive work:
 
 - Generates `device_id`
+- Assigns the next unused numbered display name by default (`Device 1`, `Device 2`, ...)
 - Generates plaintext `claim_token`
 - Hashes the token with `CLAIM_TOKEN_PEPPER`
 - Inserts `token_hash` into `device_claim_tokens`
 - Never stores plaintext claim tokens
+
+The Supabase schema includes a partial unique index for numbered admin display names so two
+simultaneous creates cannot both claim the same `Device N` name.
 
 ## Local Checks
 

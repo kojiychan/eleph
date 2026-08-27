@@ -743,13 +743,9 @@ h3 {
   align-self: start;
 }
 
-.admin-key-row {
+.compact-admin-row {
   display: flex;
   gap: 10px;
-}
-
-.admin-key-row input {
-  min-width: 0;
 }
 
 .admin-table-wrap {
@@ -829,7 +825,7 @@ h3 {
     grid-template-columns: 1fr;
   }
 
-  .admin-key-row {
+  .compact-admin-row {
     flex-direction: column;
   }
 

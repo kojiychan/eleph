@@ -6,8 +6,10 @@ const detailsEl = document.querySelector("#device-details");
 const downloadPngButton = document.querySelector("#download-png");
 const downloadSvgButton = document.querySelector("#download-svg");
 const printButton = document.querySelector("#print-label");
+const displayNameInput = document.querySelector("#display-name");
 
 let latestResult = null;
+let displayNameEdited = false;
 
 const setStatus = (message, tone = "neutral") => {
   statusEl.textContent = message;
@@ -15,6 +17,16 @@ const setStatus = (message, tone = "neutral") => {
 };
 
 const value = (formData, key) => String(formData.get(key) ?? "").trim();
+
+const readJsonResponse = async (response) => {
+  const contentType = response.headers.get("content-type") || "";
+
+  if (contentType.includes("application/json")) {
+    return response.json();
+  }
+
+  throw new Error("Admin API is not available in this static preview.");
+};
 
 const downloadDataUrl = (filename, dataUrl) => {
   const link = document.createElement("a");
@@ -64,6 +76,32 @@ const renderDetails = ({ device, qr_url }) => {
   }
 };
 
+const refreshNextDisplayName = async () => {
+  if (displayNameEdited) {
+    return;
+  }
+
+  try {
+    const response = await fetch("/api/admin/devices");
+    const result = await readJsonResponse(response);
+
+    if (!response.ok) {
+      throw new Error(result.error || "Could not load next device name");
+    }
+
+    if (result.next_display_name && !displayNameEdited) {
+      displayNameInput.value = result.next_display_name;
+    }
+  } catch (error) {
+    setStatus(error.message, "error");
+  }
+};
+
+displayNameInput.addEventListener("input", () => {
+  displayNameEdited = true;
+});
+refreshNextDisplayName();
+
 form.addEventListener("submit", async (event) => {
   event.preventDefault();
 
@@ -78,7 +116,6 @@ form.addEventListener("submit", async (event) => {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        "X-Admin-Provisioning-Key": value(formData, "admin_key"),
       },
       body: JSON.stringify({
         display_name: value(formData, "display_name"),
@@ -88,7 +125,7 @@ form.addEventListener("submit", async (event) => {
         notes: value(formData, "notes"),
       }),
     });
-    const result = await response.json();
+    const result = await readJsonResponse(response);
 
     if (!response.ok) {
       throw new Error(result.error || "Device creation failed");
@@ -98,6 +135,10 @@ form.addEventListener("submit", async (event) => {
     qrFrame.innerHTML = result.qr.svg;
     renderDetails(result);
     resultEl.hidden = false;
+    if (result.next_display_name) {
+      displayNameEdited = false;
+      displayNameInput.value = result.next_display_name;
+    }
     setStatus("Device created. Print or download the QR label now.", "success");
   } catch (error) {
     setStatus(error.message, "error");

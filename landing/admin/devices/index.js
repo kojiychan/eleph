@@ -7,7 +7,15 @@ const setStatus = (message, tone = "neutral") => {
   statusEl.dataset.tone = tone;
 };
 
-const value = (formData, key) => String(formData.get(key) ?? "").trim();
+const readJsonResponse = async (response) => {
+  const contentType = response.headers.get("content-type") || "";
+
+  if (contentType.includes("application/json")) {
+    return response.json();
+  }
+
+  throw new Error("Admin API is not available in this static preview.");
+};
 
 const formatDate = (valueToFormat) => {
   if (!valueToFormat) {
@@ -59,19 +67,14 @@ const renderDevices = (devices) => {
 form.addEventListener("submit", async (event) => {
   event.preventDefault();
 
-  const formData = new FormData(form);
   const submitButton = form.querySelector("button[type='submit']");
 
   submitButton.disabled = true;
   setStatus("Loading devices...", "neutral");
 
   try {
-    const response = await fetch("/api/admin/devices", {
-      headers: {
-        "X-Admin-Provisioning-Key": value(formData, "admin_key"),
-      },
-    });
-    const result = await response.json();
+    const response = await fetch("/api/admin/devices");
+    const result = await readJsonResponse(response);
 
     if (!response.ok) {
       throw new Error(result.error || "Could not load devices");

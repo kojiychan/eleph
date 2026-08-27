@@ -70,5 +70,9 @@ create index if not exists device_claim_tokens_device_id_idx
 create index if not exists device_claim_tokens_token_hash_idx
     on public.device_claim_tokens (token_hash);
 
+create unique index if not exists devices_numbered_display_name_unique_idx
+    on public.devices (lower(trim(display_name)))
+    where display_name ~* '^Device[[:space:]]+[0-9]+$';
+
 alter table public.devices enable row level security;
 alter table public.device_claim_tokens enable row level security;

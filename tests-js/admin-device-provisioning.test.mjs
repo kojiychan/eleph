@@ -6,8 +6,10 @@ import handler from "../api/admin/devices.js";
 import {
   assertAdminRequest,
   buildQrUrl,
+  ensureUniqueDeviceDisplayName,
   generateClaimToken,
   generateDeviceId,
+  getNextDeviceDisplayName,
   hashClaimToken,
   sanitizeDeviceInput,
 } from "../lib/admin/device-provisioning.mjs";
@@ -43,7 +45,7 @@ test("QR URL contains device_id and plaintext one-time token", () => {
 
 test("device input gets required defaults", () => {
   assert.deepEqual(sanitizeDeviceInput({}), {
-    display_name: "Bathroom Monitor",
+    display_name: "Device 1",
     model: "eleph-zero2w-c4001",
     hardware_serial: "",
     batch_id: "",
@@ -51,12 +53,30 @@ test("device input gets required defaults", () => {
   });
 });
 
+test("next device display name advances from the highest created device number", () => {
+  assert.equal(
+    getNextDeviceDisplayName([
+      { display_name: "Device 1" },
+      { display_name: "Kitchen Monitor" },
+      { display_name: "Device 4" },
+      { display_name: "device 2" },
+    ]),
+    "Device 5",
+  );
+});
+
+test("duplicate device display names are replaced with the next numbered device name", () => {
+  const devices = [{ display_name: "Device 1" }, { display_name: "Device 2" }];
+
+  assert.equal(ensureUniqueDeviceDisplayName("Device 2", devices), "Device 3");
+  assert.equal(ensureUniqueDeviceDisplayName(" device 1 ", devices), "Device 3");
+  assert.equal(ensureUniqueDeviceDisplayName("Kitchen Monitor", devices), "Kitchen Monitor");
+});
+
 test("admin guard blocks when feature flag is missing", () => {
   assert.deepEqual(
     assertAdminRequest({
       enabled: "false",
-      expectedKey: "secret",
-      providedKey: "secret",
     }),
     {
       ok: false,
@@ -66,19 +86,24 @@ test("admin guard blocks when feature flag is missing", () => {
   );
 });
 
+test("admin guard allows requests without an admin key when enabled", () => {
+  assert.deepEqual(
+    assertAdminRequest({
+      enabled: "true",
+    }),
+    { ok: true },
+  );
+});
+
 test("admin API rejects when provisioning flag is missing", async () => {
   const previousFlag = process.env.ENABLE_ADMIN_DEVICE_PROVISIONING;
-  const previousKey = process.env.ADMIN_DEVICE_PROVISIONING_KEY;
   process.env.ENABLE_ADMIN_DEVICE_PROVISIONING = "false";
-  process.env.ADMIN_DEVICE_PROVISIONING_KEY = "secret";
 
   const response = createMockResponse();
   await handler(
     {
       method: "GET",
-      headers: {
-        "x-admin-provisioning-key": "secret",
-      },
+      headers: {},
     },
     response,
   );
@@ -87,7 +112,6 @@ test("admin API rejects when provisioning flag is missing", async () => {
   assert.equal(JSON.parse(response.body).error, "Admin device provisioning is disabled.");
 
   restoreEnv("ENABLE_ADMIN_DEVICE_PROVISIONING", previousFlag);
-  restoreEnv("ADMIN_DEVICE_PROVISIONING_KEY", previousKey);
 });
 
 function createMockResponse() {
