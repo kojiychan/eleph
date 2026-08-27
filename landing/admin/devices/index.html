@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Devices | Eleph Admin</title>
+    <meta name="robots" content="noindex" />
+    <meta name="theme-color" content="#112943" />
+    <link rel="icon" href="/assets/eleph-logo.png" />
+    <link rel="stylesheet" href="/styles.css" />
+  </head>
+  <body class="admin-page">
+    <header class="legal-header">
+      <a class="brand" href="/" aria-label="Eleph home">
+        <img class="brand-logo" src="/assets/eleph-logo.png" alt="" />
+        <span>Eleph Admin</span>
+      </a>
+      <a class="header-action" href="/admin/devices/new/">New device</a>
+    </header>
+
+    <main class="admin-main">
+      <section class="admin-panel" aria-labelledby="devices-title">
+        <div>
+          <p class="eyebrow">Manufacturing</p>
+          <h1 id="devices-title">Recent devices</h1>
+          <p class="admin-copy">Plaintext claim tokens are never shown after creation.</p>
+        </div>
+        <form class="admin-form compact-admin-form" id="devices-form">
+          <label for="admin-key">Admin key</label>
+          <div class="admin-key-row">
+            <input id="admin-key" name="admin_key" type="password" autocomplete="off" required />
+            <button type="submit">Load devices</button>
+          </div>
+          <p class="form-status" id="devices-status" role="status" aria-live="polite"></p>
+        </form>
+      </section>
+
+      <section class="admin-table-wrap" aria-label="Recent devices">
+        <table class="admin-table">
+          <thead>
+            <tr>
+              <th>Device ID</th>
+              <th>Name</th>
+              <th>Model</th>
+              <th>Status</th>
+              <th>Last seen</th>
+              <th>Created</th>
+              <th>Claim used</th>
+            </tr>
+          </thead>
+          <tbody id="devices-body">
+            <tr>
+              <td colspan="7">Enter the admin key to load devices.</td>
+            </tr>
+          </tbody>
+        </table>
+      </section>
+    </main>
+
+    <script src="/admin/devices/index.js"></script>
+  </body>
+</html>

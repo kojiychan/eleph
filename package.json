@@ -1,9 +1,14 @@
 {
   "name": "eleph-landing",
   "private": true,
+  "type": "module",
   "version": "0.1.0",
   "scripts": {
     "build": "node scripts/build_landing.mjs",
-    "dev": "python3 -m http.server 4173 --directory landing"
+    "dev": "python3 -m http.server 4173 --directory landing",
+    "test:admin": "node --test tests-js/admin-device-provisioning.test.mjs"
+  },
+  "dependencies": {
+    "qrcode": "^1.5.4"
   }
 }

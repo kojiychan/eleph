@@ -1,0 +1,87 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>New Device | Eleph Admin</title>
+    <meta name="robots" content="noindex" />
+    <meta name="theme-color" content="#112943" />
+    <link rel="icon" href="/assets/eleph-logo.png" />
+    <link rel="stylesheet" href="/styles.css" />
+  </head>
+  <body class="admin-page">
+    <header class="legal-header">
+      <a class="brand" href="/" aria-label="Eleph home">
+        <img class="brand-logo" src="/assets/eleph-logo.png" alt="" />
+        <span>Eleph Admin</span>
+      </a>
+      <a class="header-action" href="/admin/devices/">Devices</a>
+    </header>
+
+    <main class="admin-main">
+      <section class="admin-panel" aria-labelledby="admin-title">
+        <div>
+          <p class="eyebrow">Manufacturing</p>
+          <h1 id="admin-title">Create Device + Generate QR</h1>
+          <p class="admin-copy">
+            Temporary private tool for provisioning physical Eleph devices. Proper admin role
+            authorization is required before production.
+          </p>
+        </div>
+
+        <form class="admin-form" id="device-form">
+          <div class="field-grid">
+            <div class="field">
+              <label for="admin-key">Admin key</label>
+              <input id="admin-key" name="admin_key" type="password" autocomplete="off" required />
+            </div>
+            <div class="field">
+              <label for="display-name">Display name</label>
+              <input id="display-name" name="display_name" type="text" value="Bathroom Monitor" required />
+            </div>
+            <div class="field">
+              <label for="model">Model</label>
+              <input id="model" name="model" type="text" value="eleph-zero2w-c4001" required />
+            </div>
+            <div class="field">
+              <label for="hardware-serial">Hardware serial</label>
+              <input id="hardware-serial" name="hardware_serial" type="text" />
+            </div>
+            <div class="field">
+              <label for="batch-id">Batch ID</label>
+              <input id="batch-id" name="batch_id" type="text" />
+            </div>
+            <div class="field field-wide">
+              <label for="notes">Notes</label>
+              <textarea id="notes" name="notes" rows="4"></textarea>
+            </div>
+          </div>
+
+          <div class="form-submit-row">
+            <button type="submit">Create Device + Generate QR</button>
+            <p class="form-status" id="device-form-status" role="status" aria-live="polite"></p>
+          </div>
+        </form>
+      </section>
+
+      <section class="admin-result" id="device-result" hidden aria-labelledby="result-title">
+        <div>
+          <p class="eyebrow">One-time label</p>
+          <h2 id="result-title">Provisioning QR</h2>
+          <p class="token-warning">Claim token is only shown once. Do not store the plaintext token.</p>
+        </div>
+        <div class="qr-layout">
+          <div class="qr-frame" id="qr-frame"></div>
+          <dl class="device-details" id="device-details"></dl>
+        </div>
+        <div class="admin-actions">
+          <button type="button" id="download-png">Download PNG</button>
+          <button type="button" id="download-svg">Download SVG</button>
+          <button type="button" id="print-label">Print label</button>
+        </div>
+      </section>
+    </main>
+
+    <script src="/admin/devices/new.js"></script>
+  </body>
+</html>
