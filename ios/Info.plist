@@ -31,10 +31,12 @@
 	</array>
 	<key>CFBundleVersion</key>
 	<string>$(CURRENT_PROJECT_VERSION)</string>
-    <key>LSApplicationCategoryType</key>
-    <string>public.app-category.healthcare-fitness</string>
-    <key>UIApplicationSceneManifest</key>
-    <dict>
+	<key>LSApplicationCategoryType</key>
+	<string>public.app-category.healthcare-fitness</string>
+	<key>NSBluetoothAlwaysUsageDescription</key>
+	<string>Eleph uses Bluetooth to connect to a nearby monitor during setup and send Wi-Fi provisioning details.</string>
+	<key>UIApplicationSceneManifest</key>
+	<dict>
         <key>UIApplicationSupportsMultipleScenes</key>
         <false/>
     </dict>

@@ -9,6 +9,9 @@ venv/
 dist/
 build/
 *.egg-info/
+node_modules/
 .env
 .env.*
 !.env.example
+.eleph-device.json
+data/device.json

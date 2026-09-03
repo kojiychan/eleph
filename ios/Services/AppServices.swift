@@ -49,6 +49,22 @@ protocol WiFiProvisioningService {
     func connect(deviceID: String, networkName: String, password: String) async throws
 }
 
+protocol ElephSetupBluetoothService {
+    func scanForSetupDevices() async throws -> [SetupDevice]
+    func connect(to setupDevice: SetupDevice) async throws
+    func readSetupStatus() async throws -> SetupStatus
+    func sendProvisioningPayload(_ payload: ProvisioningPayload) async throws
+    func observeProvisioningStatus() async throws -> ProvisioningStatus
+}
+
+protocol DevicePairingService {
+    func claimDevice(deviceID: String, claimToken: String, displayName: String) async throws
+}
+
+protocol DeviceHeartbeatService {
+    func waitForDeviceOnline(deviceID: String, timeoutSeconds: Int) async throws
+}
+
 protocol DeviceIdentityStore {
     func loadDeviceID() -> String?
     func saveDeviceID(_ id: String)
@@ -63,11 +79,15 @@ struct AppServiceContainer {
     let authenticationService: AuthenticationService
     let bluetoothService: BluetoothProvisioningService
     let wifiService: WiFiProvisioningService
+    let setupBluetoothService: ElephSetupBluetoothService
+    let devicePairingService: DevicePairingService
+    let deviceHeartbeatService: DeviceHeartbeatService
     let identityStore: DeviceIdentityStore
     let isUsingMockData: Bool
     let betaMonitorDeviceID: String
     let legalLinks: LegalLinks
 
+    @MainActor
     static func liveOrMock() -> AppServiceContainer {
         let store = UserDefaultsDeviceIdentityStore()
         guard let configuration = AppConfiguration.load() else {
@@ -86,6 +106,9 @@ struct AppServiceContainer {
             authenticationService: SupabaseAuthenticationService(configuration: configuration, identityStore: store),
             bluetoothService: MockBluetoothProvisioningService(),
             wifiService: MockWiFiProvisioningService(),
+            setupBluetoothService: CoreBluetoothElephSetupService(),
+            devicePairingService: repository,
+            deviceHeartbeatService: repository,
             identityStore: store,
             isUsingMockData: false,
             betaMonitorDeviceID: configuration.monitorDeviceID,
@@ -105,6 +128,9 @@ struct AppServiceContainer {
             authenticationService: MockAuthenticationService(),
             bluetoothService: MockBluetoothProvisioningService(),
             wifiService: MockWiFiProvisioningService(),
+            setupBluetoothService: MockElephSetupBluetoothService(),
+            devicePairingService: MockDevicePairingService(identityStore: store),
+            deviceHeartbeatService: MockDeviceHeartbeatService(),
             identityStore: store,
             isUsingMockData: true,
             betaMonitorDeviceID: data.device.id,

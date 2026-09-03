@@ -587,7 +587,7 @@ struct OnboardingView: View {
     )
 }
 
-private extension View {
+extension View {
     @ViewBuilder
     func emailInputTraits() -> some View {
         #if os(iOS)

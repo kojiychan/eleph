@@ -5,7 +5,7 @@ final class AppRootViewModel: ObservableObject {
     @Published var onboardingCompleted: Bool
     @Published var selectedTab: MainTab = .home
 
-    private let services: AppServiceContainer
+    let services: AppServiceContainer
 
     init(services: AppServiceContainer) {
         self.services = services

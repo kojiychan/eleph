@@ -1,11 +1,15 @@
 import argparse
+import json
 import logging
+from pathlib import Path
 import signal
 from threading import Event
 from collections.abc import Sequence
 
-from eleph.app import build_motion_monitor, post_device_heartbeat, post_fake_motion
+from eleph.app import build_motion_monitor, post_device_heartbeat, post_fake_motion, provision_device
 from eleph.config import Settings, parse_bool
+from eleph.domain.onboarding import ProvisioningPayload
+from eleph.services.ble_onboarding import BleOnboardingServer, BleSetupContract, setup_mode_for
 
 LOGGER = logging.getLogger(__name__)
 
@@ -40,6 +44,54 @@ def build_parser() -> argparse.ArgumentParser:
         "--strict-upload",
         action="store_true",
         help="Fail if the Supabase heartbeat fails instead of logging and continuing.",
+    )
+
+    provision_parser = subparsers.add_parser(
+        "provision",
+        help="Provision identity and Wi-Fi from an app-style onboarding payload.",
+    )
+    payload_group = provision_parser.add_mutually_exclusive_group(required=True)
+    payload_group.add_argument("--payload-json", help="Provisioning payload as JSON.")
+    payload_group.add_argument(
+        "--payload-file",
+        type=Path,
+        help="Path to a JSON file containing the provisioning payload.",
+    )
+    provision_parser.add_argument(
+        "--dry-run-wifi",
+        action="store_true",
+        help="Validate and save config without changing the Pi Wi-Fi.",
+    )
+    provision_parser.add_argument(
+        "--skip-heartbeat",
+        action="store_true",
+        help="Skip the post-provisioning Supabase heartbeat.",
+    )
+
+    subparsers.add_parser(
+        "setup-server",
+        help="Run the BLE setup GATT server when the Pi needs onboarding.",
+    )
+    setup_server_parser = subparsers.choices["setup-server"]
+    setup_server_parser.add_argument(
+        "--print-only",
+        action="store_true",
+        help="Print the BLE contract and setup mode without starting BlueZ.",
+    )
+    setup_server_parser.add_argument(
+        "--force",
+        action="store_true",
+        help="Start BLE advertising even if the device appears provisioned.",
+    )
+    setup_server_parser.add_argument(
+        "--dry-run-wifi",
+        action="store_true",
+        help="Accept provisioning payloads without changing the Pi Wi-Fi.",
+    )
+    setup_server_parser.add_argument(
+        "--skip-heartbeat",
+        action="store_true",
+        help="Skip the post-provisioning Supabase heartbeat.",
     )
 
     subparsers.add_parser("doctor", help="Print runtime configuration.")
@@ -123,8 +175,81 @@ def main(argv: Sequence[str] | None = None) -> int:
         LOGGER.info("device heartbeat emitted device_id=%s", settings.device_id)
         return 0
 
+    if args.command == "provision":
+        payload = _load_provisioning_payload(args)
+        result = provision_device(
+            settings,
+            payload,
+            dry_run_wifi=args.dry_run_wifi,
+            send_heartbeat=not args.skip_heartbeat,
+        )
+        print(
+            json.dumps(
+                {
+                    "device_id": result.identity.device_id,
+                    "display_name": result.identity.display_name,
+                    "wifi_connected": result.wifi_connected,
+                    "heartbeat_sent": result.heartbeat_sent,
+                    "message": result.message,
+                },
+                indent=2,
+                sort_keys=True,
+            )
+        )
+        return 0 if result.wifi_connected else 1
+
+    if args.command == "setup-server":
+        setup_mode = setup_mode_for(settings)
+        contract = BleSetupContract(advertised_name=setup_mode.advertised_name)
+        server = BleOnboardingServer(
+            contract=contract,
+            setup_mode=setup_mode,
+            on_payload=lambda payload: provision_device(
+                settings,
+                payload,
+                dry_run_wifi=args.dry_run_wifi,
+                send_heartbeat=not args.skip_heartbeat,
+            ),
+        )
+        print(
+            json.dumps(
+                {
+                    "contract": server.contract.to_mapping(),
+                    "setup_mode": {
+                        "enabled": setup_mode.enabled,
+                        "advertised_name": setup_mode.advertised_name,
+                        "reason": setup_mode.reason,
+                    },
+                },
+                indent=2,
+                sort_keys=True,
+            )
+        )
+        if setup_mode.enabled:
+            LOGGER.warning("BLE setup mode should run: %s", setup_mode.reason)
+        else:
+            LOGGER.info("BLE setup mode not needed: %s", setup_mode.reason)
+        if args.print_only:
+            return 0
+        if not setup_mode.enabled and not args.force:
+            LOGGER.info("Use --force to advertise BLE setup anyway.")
+            return 0
+        server.run()
+        return 0
+
     parser.error(f"Unhandled command: {args.command}")
     return 2
+
+
+def _load_provisioning_payload(args: argparse.Namespace) -> ProvisioningPayload:
+    if args.payload_json:
+        data = json.loads(args.payload_json)
+    else:
+        data = json.loads(args.payload_file.read_text(encoding="utf-8"))
+    if not isinstance(data, dict):
+        msg = "Provisioning payload must be a JSON object."
+        raise ValueError(msg)
+    return ProvisioningPayload.from_mapping(data)
 
 
 def _shutdown_event() -> Event:

@@ -1,5 +1,6 @@
 from collections.abc import Iterator
 from contextlib import contextmanager
+from pathlib import Path
 
 from eleph import __version__
 from eleph.adapters.events.logging_activity import LoggingMotionActivityReporter
@@ -11,14 +12,18 @@ from eleph.adapters.sensors.c4001_i2c import C4001I2cPresenceSensor
 from eleph.adapters.sensors.infrared_gpio import InfraredGpioSensor
 from eleph.adapters.sensors.simulated import SimulatedMotionSensor
 from eleph.config import Settings
+from eleph.domain.onboarding import ProvisioningPayload, ProvisioningResult
 from eleph.domain.events import MotionEvent
 from eleph.domain.motion import MotionSensor
 from eleph.domain.sinks import MotionEventSink
 from eleph.logging_config import configure_logging
+from eleph.services.device_config import DeviceConfigStore
 from eleph.services.device_heartbeat import DeviceHeartbeat, NullDeviceStatusReporter
+from eleph.services.onboarding import DeviceOnboardingService
 from eleph.services.motion_monitor import MotionMonitor
 from eleph.services.reliable_activity import ReliableMotionActivityReporter
 from eleph.services.reliable_sink import ReliableMotionEventSink
+from eleph.services.wifi import DryRunWifiProvisioner, NmcliWifiProvisioner
 
 
 def build_sensor(settings: Settings) -> MotionSensor:
@@ -114,6 +119,32 @@ def post_fake_motion(settings: Settings, *, strict_upload: bool = False) -> Moti
     sink.record_motion(event)
     sink.flush_pending()
     return event
+
+
+def provision_device(
+    settings: Settings,
+    payload: ProvisioningPayload,
+    *,
+    dry_run_wifi: bool = False,
+    send_heartbeat: bool = True,
+) -> ProvisioningResult:
+    configure_logging(settings.log_level)
+    wifi_provisioner = (
+        DryRunWifiProvisioner()
+        if dry_run_wifi
+        else NmcliWifiProvisioner(
+            iface=settings.wifi_iface,
+            timeout_seconds=settings.wifi_provision_timeout_seconds,
+            use_sudo=settings.wifi_use_sudo,
+        )
+    )
+    service = DeviceOnboardingService(
+        settings=settings,
+        config_store=DeviceConfigStore(Path(settings.device_config_path)),
+        wifi_provisioner=wifi_provisioner,
+        heartbeat_sender=post_device_heartbeat,
+    )
+    return service.provision(payload, send_heartbeat=send_heartbeat)
 
 
 def sensor_type_for(settings: Settings) -> str:

@@ -52,6 +52,10 @@
 		9A000000000000000000006A /* Legal/PrivacyPolicy.md in Resources */ = {isa = PBXBuildFile; fileRef = 9A000000000000000000003C /* Legal/PrivacyPolicy.md */; };
 		9A000000000000000000006B /* Legal/TermsAndConditions.md in Resources */ = {isa = PBXBuildFile; fileRef = 9A000000000000000000003D /* Legal/TermsAndConditions.md */; };
 		9A000000000000000000006C /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = 9A000000000000000000003E /* PrivacyInfo.xcprivacy */; };
+		9A000000000000000000006D /* Models/DeviceSetupModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9A0000000000000000000070 /* Models/DeviceSetupModels.swift */; };
+		9A000000000000000000006E /* ViewModels/AddDeviceViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9A0000000000000000000071 /* ViewModels/AddDeviceViewModel.swift */; };
+		9A000000000000000000006F /* Views/AddDeviceView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9A0000000000000000000072 /* Views/AddDeviceView.swift */; };
+		9A0000000000000000000073 /* Services/CoreBluetoothElephSetupService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9A0000000000000000000074 /* Services/CoreBluetoothElephSetupService.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -102,6 +106,10 @@
 		9A000000000000000000003E /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; lastKnownFileType = text.xml; path = PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
 		9A000000000000000000003F /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		9A0000000000000000000040 /* Eleph.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = Eleph.entitlements; sourceTree = "<group>"; };
+		9A0000000000000000000070 /* Models/DeviceSetupModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Models/DeviceSetupModels.swift; sourceTree = "<group>"; };
+		9A0000000000000000000071 /* ViewModels/AddDeviceViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ViewModels/AddDeviceViewModel.swift; sourceTree = "<group>"; };
+		9A0000000000000000000072 /* Views/AddDeviceView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Views/AddDeviceView.swift; sourceTree = "<group>"; };
+		9A0000000000000000000074 /* Services/CoreBluetoothElephSetupService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Services/CoreBluetoothElephSetupService.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -136,7 +144,9 @@
 				9A000000000000000000001F /* Components/StatusCard.swift */,
 				9A0000000000000000000020 /* ElephBathroomMonitorApp.swift */,
 				9A0000000000000000000021 /* Models/AppModels.swift */,
+				9A0000000000000000000070 /* Models/DeviceSetupModels.swift */,
 				9A0000000000000000000022 /* Services/AppServices.swift */,
+				9A0000000000000000000074 /* Services/CoreBluetoothElephSetupService.swift */,
 				9A0000000000000000000023 /* Services/MockData.swift */,
 				9A0000000000000000000024 /* Services/MockServices.swift */,
 				9A0000000000000000000025 /* Services/SupabaseAppRepository.swift */,
@@ -148,10 +158,12 @@
 				9A000000000000000000002B /* Utilities/LoadableState.swift */,
 				9A000000000000000000002C /* Utilities/PreviewScenarios.swift */,
 				9A000000000000000000002D /* ViewModels/ActivityViewModel.swift */,
+				9A0000000000000000000071 /* ViewModels/AddDeviceViewModel.swift */,
 				9A000000000000000000002E /* ViewModels/AppRootViewModel.swift */,
 				9A000000000000000000002F /* ViewModels/HomeViewModel.swift */,
 				9A0000000000000000000030 /* ViewModels/OnboardingViewModel.swift */,
 				9A0000000000000000000031 /* ViewModels/SettingsViewModel.swift */,
+				9A0000000000000000000072 /* Views/AddDeviceView.swift */,
 				9A0000000000000000000032 /* Views/ActivityView.swift */,
 				9A0000000000000000000033 /* Views/AppRootView.swift */,
 				9A0000000000000000000034 /* Views/HomeView.swift */,
@@ -280,7 +292,9 @@
 				9A000000000000000000004D /* Components/StatusCard.swift in Sources */,
 				9A000000000000000000004E /* ElephBathroomMonitorApp.swift in Sources */,
 				9A000000000000000000004F /* Models/AppModels.swift in Sources */,
+				9A000000000000000000006D /* Models/DeviceSetupModels.swift in Sources */,
 				9A0000000000000000000050 /* Services/AppServices.swift in Sources */,
+				9A0000000000000000000073 /* Services/CoreBluetoothElephSetupService.swift in Sources */,
 				9A0000000000000000000051 /* Services/MockData.swift in Sources */,
 				9A0000000000000000000052 /* Services/MockServices.swift in Sources */,
 				9A0000000000000000000053 /* Services/SupabaseAppRepository.swift in Sources */,
@@ -292,10 +306,12 @@
 				9A0000000000000000000059 /* Utilities/LoadableState.swift in Sources */,
 				9A000000000000000000005A /* Utilities/PreviewScenarios.swift in Sources */,
 				9A000000000000000000005B /* ViewModels/ActivityViewModel.swift in Sources */,
+				9A000000000000000000006E /* ViewModels/AddDeviceViewModel.swift in Sources */,
 				9A000000000000000000005C /* ViewModels/AppRootViewModel.swift in Sources */,
 				9A000000000000000000005D /* ViewModels/HomeViewModel.swift in Sources */,
 				9A000000000000000000005E /* ViewModels/OnboardingViewModel.swift in Sources */,
 				9A000000000000000000005F /* ViewModels/SettingsViewModel.swift in Sources */,
+				9A000000000000000000006F /* Views/AddDeviceView.swift in Sources */,
 				9A0000000000000000000060 /* Views/ActivityView.swift in Sources */,
 				9A0000000000000000000061 /* Views/AppRootView.swift in Sources */,
 				9A0000000000000000000062 /* Views/HomeView.swift in Sources */,

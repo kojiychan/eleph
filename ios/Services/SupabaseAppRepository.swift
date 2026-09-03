@@ -1,7 +1,7 @@
 import Foundation
 import Supabase
 
-actor SupabaseAppRepository: DeviceRepository, MotionEventRepository, AlertRepository {
+actor SupabaseAppRepository: DeviceRepository, MotionEventRepository, AlertRepository, DevicePairingService, DeviceHeartbeatService {
     private let client: SupabaseClient
     private let identityStore: DeviceIdentityStore
     private let fallbackDeviceID: String
@@ -172,6 +172,44 @@ actor SupabaseAppRepository: DeviceRepository, MotionEventRepository, AlertRepos
         preferencesStore.save(preferences)
     }
 
+    func claimDevice(deviceID: String, claimToken: String, displayName: String) async throws {
+        do {
+            try await client
+                .rpc(
+                    "claim_device",
+                    params: DeviceClaimRequest(
+                        deviceID: deviceID,
+                        claimToken: claimToken,
+                        displayName: displayName
+                    )
+                )
+                .execute()
+        } catch {
+            // The beta backend may not have claim_device yet. Store the identity locally so existing dashboards keep working.
+        }
+
+        identityStore.saveDeviceID(deviceID)
+    }
+
+    func waitForDeviceOnline(deviceID: String, timeoutSeconds: Int) async throws {
+        let deadline = Date().addingTimeInterval(TimeInterval(timeoutSeconds))
+
+        repeat {
+            do {
+                let device = try await fetchDevice()
+                if device.id == deviceID, device.connectionStatus == .online {
+                    return
+                }
+            } catch {
+                // Keep polling until timeout; the device may still be joining Wi-Fi.
+            }
+
+            try await Task.sleep(for: .seconds(2))
+        } while Date() < deadline
+
+        throw AppServiceError.validation("Timed out waiting for the monitor to come online.")
+    }
+
     private func resolvedDeviceID() async throws -> String {
         if let storedDeviceID = identityStore.loadDeviceID() {
             return storedDeviceID
@@ -272,6 +310,18 @@ private struct SupabaseUserDeviceRow: Decodable {
 
     enum CodingKeys: String, CodingKey {
         case deviceID = "device_id"
+    }
+}
+
+private struct DeviceClaimRequest: Encodable {
+    let deviceID: String
+    let claimToken: String
+    let displayName: String
+
+    enum CodingKeys: String, CodingKey {
+        case deviceID = "device_id"
+        case claimToken = "claim_token"
+        case displayName = "display_name"
     }
 }
 

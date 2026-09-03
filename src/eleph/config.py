@@ -1,4 +1,5 @@
 from dataclasses import dataclass
+import json
 import os
 from pathlib import Path
 
@@ -37,6 +38,10 @@ class Settings:
     motion_event_cooldown_seconds: float = 180.0
     motion_session_idle_timeout_seconds: float = 180.0
     supabase_timeout_seconds: float = 3.0
+    device_config_path: str = ".eleph-device.json"
+    wifi_iface: str = "wlan0"
+    wifi_provision_timeout_seconds: float = 35.0
+    wifi_use_sudo: bool = False
     c4001_i2c_bus: int = 1
     c4001_i2c_address: int = 0x2A
     c4001_min_range_cm: int = 30
@@ -51,6 +56,8 @@ class Settings:
     @classmethod
     def from_env(cls) -> "Settings":
         load_dotenv()
+        device_config_path = os.getenv("ELEPH_DEVICE_CONFIG_PATH", cls.device_config_path)
+        stored_device_id = _stored_device_id(Path(device_config_path))
         gpio_pin = os.getenv("ELEPH_GPIO_PIN")
         return cls(
             environment=os.getenv("ELEPH_ENV", cls.environment),
@@ -59,7 +66,7 @@ class Settings:
                 os.getenv("ELEPH_POLL_INTERVAL_SECONDS", str(cls.poll_interval_seconds))
             ),
             log_level=os.getenv("ELEPH_LOG_LEVEL", cls.log_level),
-            device_id=os.getenv("ELEPH_DEVICE_ID", cls.device_id),
+            device_id=os.getenv("ELEPH_DEVICE_ID", stored_device_id or cls.device_id),
             gpio_pin=int(gpio_pin) if gpio_pin else None,
             sensor_active_low=parse_bool(
                 os.getenv("ELEPH_SENSOR_ACTIVE_LOW", str(cls.sensor_active_low))
@@ -95,6 +102,15 @@ class Settings:
             supabase_timeout_seconds=float(
                 os.getenv("ELEPH_SUPABASE_TIMEOUT_SECONDS", str(cls.supabase_timeout_seconds))
             ),
+            device_config_path=device_config_path,
+            wifi_iface=os.getenv("ELEPH_WIFI_IFACE", cls.wifi_iface),
+            wifi_provision_timeout_seconds=float(
+                os.getenv(
+                    "ELEPH_WIFI_PROVISION_TIMEOUT_SECONDS",
+                    str(cls.wifi_provision_timeout_seconds),
+                )
+            ),
+            wifi_use_sudo=parse_bool(os.getenv("ELEPH_WIFI_USE_SUDO", str(cls.wifi_use_sudo))),
             c4001_i2c_bus=int(os.getenv("ELEPH_C4001_I2C_BUS", str(cls.c4001_i2c_bus))),
             c4001_i2c_address=int(
                 os.getenv("ELEPH_C4001_I2C_ADDRESS", hex(cls.c4001_i2c_address)), 0
@@ -174,6 +190,10 @@ class Settings:
             motion_event_cooldown_seconds=self.motion_event_cooldown_seconds,
             motion_session_idle_timeout_seconds=self.motion_session_idle_timeout_seconds,
             supabase_timeout_seconds=self.supabase_timeout_seconds,
+            device_config_path=self.device_config_path,
+            wifi_iface=self.wifi_iface,
+            wifi_provision_timeout_seconds=self.wifi_provision_timeout_seconds,
+            wifi_use_sudo=self.wifi_use_sudo,
             c4001_i2c_bus=self.c4001_i2c_bus,
             c4001_i2c_address=self.c4001_i2c_address,
             c4001_min_range_cm=self.c4001_min_range_cm,
@@ -219,6 +239,10 @@ class Settings:
                 f"motion_event_cooldown_seconds={self.motion_event_cooldown_seconds}",
                 f"motion_session_idle_timeout_seconds={self.motion_session_idle_timeout_seconds}",
                 f"supabase_timeout_seconds={self.supabase_timeout_seconds}",
+                f"device_config_path={self.device_config_path}",
+                f"wifi_iface={self.wifi_iface}",
+                f"wifi_provision_timeout_seconds={self.wifi_provision_timeout_seconds}",
+                f"wifi_use_sudo={self.wifi_use_sudo}",
                 f"c4001_i2c_bus={self.c4001_i2c_bus}",
                 f"c4001_i2c_address=0x{self.c4001_i2c_address:02x}",
                 f"c4001_min_range_cm={self.c4001_min_range_cm}",
@@ -247,3 +271,20 @@ def load_dotenv(path: str | Path = ".env") -> None:
         key = key.strip()
         value = value.strip().strip('"').strip("'")
         os.environ.setdefault(key, value)
+
+
+def _stored_device_id(path: Path) -> str | None:
+    try:
+        if not path.exists():
+            return None
+        data = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return None
+
+    if not isinstance(data, dict):
+        return None
+    device_id = data.get("device_id")
+    if not isinstance(device_id, str):
+        return None
+    normalized = device_id.strip()
+    return normalized or None

@@ -136,6 +136,76 @@ struct MockWiFiProvisioningService: WiFiProvisioningService {
     }
 }
 
+struct MockElephSetupBluetoothService: ElephSetupBluetoothService {
+    var shouldFailScan = false
+    var shouldFailConnection = false
+    var shouldFailProvisioning = false
+
+    func scanForSetupDevices() async throws -> [SetupDevice] {
+        try await Task.sleep(for: .milliseconds(700))
+        if shouldFailScan {
+            throw AppServiceError.validation("No nearby Eleph monitors were found.")
+        }
+
+        return [
+            SetupDevice(
+                name: "Eleph Monitor",
+                advertisedName: "Eleph Setup",
+                signalStrength: -42,
+                serviceUUID: "E1E10001-4B18-4F7D-9D25-ELEPHSETUP01"
+            )
+        ]
+    }
+
+    func connect(to setupDevice: SetupDevice) async throws {
+        try await Task.sleep(for: .milliseconds(600))
+        if shouldFailConnection {
+            throw AppServiceError.validation("Could not connect to \(setupDevice.name).")
+        }
+    }
+
+    func readSetupStatus() async throws -> SetupStatus {
+        try await Task.sleep(for: .milliseconds(250))
+        return .readyForProvisioning
+    }
+
+    func sendProvisioningPayload(_ payload: ProvisioningPayload) async throws {
+        try await Task.sleep(for: .milliseconds(900))
+        if shouldFailProvisioning {
+            throw AppServiceError.validation("The monitor could not accept Wi-Fi setup.")
+        }
+    }
+
+    func observeProvisioningStatus() async throws -> ProvisioningStatus {
+        try await Task.sleep(for: .milliseconds(600))
+        return shouldFailProvisioning ? .failed : .online
+    }
+}
+
+struct MockDevicePairingService: DevicePairingService {
+    let identityStore: DeviceIdentityStore
+    var shouldFail = false
+
+    func claimDevice(deviceID: String, claimToken: String, displayName: String) async throws {
+        try await Task.sleep(for: .milliseconds(500))
+        if shouldFail {
+            throw AppServiceError.validation("This device could not be paired to your account.")
+        }
+        identityStore.saveDeviceID(deviceID)
+    }
+}
+
+struct MockDeviceHeartbeatService: DeviceHeartbeatService {
+    var shouldTimeout = false
+
+    func waitForDeviceOnline(deviceID: String, timeoutSeconds: Int) async throws {
+        try await Task.sleep(for: .seconds(1))
+        if shouldTimeout {
+            throw AppServiceError.validation("Timed out waiting for the monitor to come online.")
+        }
+    }
+}
+
 enum AppServiceError: LocalizedError {
     case validation(String)
 

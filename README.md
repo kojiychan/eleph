@@ -13,7 +13,7 @@ The project uses a small layered Python package:
 - `eleph.config`: typed runtime settings loaded from environment variables.
 - `eleph.domain`: product concepts such as motion events, sensor contracts, and event-sink contracts.
 - `eleph.adapters`: hardware and infrastructure adapters, including GPIO, simulator, logging, and Supabase.
-- `eleph.services`: orchestration logic for transition detection, debounce, cooldown, and retry behavior.
+- `eleph.services`: orchestration logic for transition detection, onboarding, Wi-Fi provisioning, debounce, cooldown, and retry behavior.
 
 The monitor does not contain GPIO or Supabase-specific logic. Sensors implement `MotionSensor.is_active()`, and upload destinations implement `MotionEventSink.record_motion()`.
 
@@ -110,6 +110,40 @@ Supabase Postgres connection string:
 SUPABASE_DB_URL='postgresql://...' python scripts/create_beta_signups_table.py
 ```
 
+Admin device provisioning is available at:
+
+```text
+/admin/devices/new/
+/admin/devices/
+```
+
+Apply `supabase/device_provisioning.sql` or the full `supabase/schema.sql` before using it.
+The admin API creates a device, generates a one-time plaintext claim token, stores only a
+SHA-256 token hash in Supabase, and returns a QR code with:
+
+```text
+https://eleph.app/device?device_id=...&token=...
+```
+
+Required Vercel environment variables for admin provisioning:
+
+```text
+SUPABASE_URL
+SUPABASE_SERVICE_ROLE_KEY
+CLAIM_TOKEN_PEPPER
+DEVICE_QR_BASE_URL=https://eleph.app
+```
+
+No admin key or feature flag is required while this private tool is in early manufacturing use.
+Replace it with proper authenticated admin role authorization before production.
+Never expose `SUPABASE_SERVICE_ROLE_KEY` or `CLAIM_TOKEN_PEPPER` in browser code.
+
+Run admin contract tests:
+
+```bash
+npm run test:admin
+```
+
 Run the application in simulator mode:
 
 ```bash
@@ -154,8 +188,84 @@ Environment variables are used for deployment-friendly configuration:
 - `SUPABASE_DEVICES_TABLE`: table for device heartbeat status. Defaults to `devices`.
 - `ELEPH_HEARTBEAT_INTERVAL_SECONDS`: seconds between online heartbeats. Defaults to `60`.
 - `ELEPH_SUPABASE_TIMEOUT_SECONDS`: short HTTP timeout for Supabase calls. Defaults to `3`.
+- `ELEPH_DEVICE_CONFIG_PATH`: local provisioned identity JSON path. Defaults to `.eleph-device.json`.
+- `ELEPH_WIFI_IFACE`: Wi-Fi interface used during provisioning. Defaults to `wlan0`.
+- `ELEPH_WIFI_PROVISION_TIMEOUT_SECONDS`: timeout for each Wi-Fi provisioning command. Defaults to `35`.
+- `ELEPH_WIFI_USE_SUDO`: whether provisioning should call `nmcli` through `sudo`. Defaults to `false`.
 
 Copy `.env.example` to a local `.env` file if you want a reference, but do not commit `.env` or real credentials.
+
+## Bluetooth And QR Onboarding
+
+The next onboarding flow is designed to mimic smart-lock setup:
+
+1. The unconfigured Pi advertises over Bluetooth Low Energy.
+2. The iOS app discovers and connects to the Pi.
+3. The user scans the product QR code in the app.
+4. The QR tells the app which identity to assign, such as `device_id`, display name, and a backend claim token.
+5. The app sends the identity plus Wi-Fi SSID/password to the connected Pi over BLE.
+6. The Pi asks Raspberry Pi OS NetworkManager to save/connect Wi-Fi, stores only durable device identity locally, and sends a Supabase heartbeat.
+7. Future boots load the local identity and run the normal C4001 monitor.
+
+The QR code is not the Bluetooth connection secret. It is the assignment/claim payload for the Pi the app is already connected to.
+
+Current firmware support includes the payload contract, local identity store, Wi-Fi provisioning service, CLI provisioning path, and a BlueZ BLE GATT setup server for Raspberry Pi onboarding.
+
+BLE service contract for the iOS app:
+
+```json
+{
+  "service_uuid": "E1E10001-4B18-4F7D-9D25-000000000001",
+  "provision_command_uuid": "E1E10003-4B18-4F7D-9D25-000000000001",
+  "setup_status_uuid": "E1E10002-4B18-4F7D-9D25-000000000001"
+}
+```
+
+Provisioning payload sent by the app:
+
+```json
+{
+  "device_id": "bathroom-monitor-001",
+  "display_name": "Bathroom Monitor",
+  "claim_token": "one-time-claim-token-from-qr",
+  "wifi_ssid": "kenjikojidebbie",
+  "wifi_password": "wifi-password-entered-in-app"
+}
+```
+
+The Pi writes `.eleph-device.json` after Wi-Fi succeeds:
+
+```json
+{
+  "device_id": "bathroom-monitor-001",
+  "display_name": "Bathroom Monitor",
+  "last_wifi_ssid": "kenjikojidebbie",
+  "provisioned_at": "2026-08-26T00:00:00+00:00"
+}
+```
+
+The Pi does not write the Wi-Fi password or claim token to the Eleph project config. NetworkManager stores Wi-Fi credentials in the operating system's root-owned connection store.
+
+Test the app-style payload outside BLE:
+
+```bash
+PYTHONPATH=src python3 -m eleph provision \
+  --dry-run-wifi \
+  --skip-heartbeat \
+  --payload-json '{"device_id":"bathroom-monitor-001","display_name":"Bathroom Monitor","claim_token":"test-claim","wifi_ssid":"kenjikojidebbie","wifi_password":"test-password"}'
+```
+
+Run the BLE GATT setup server on the Pi:
+
+```bash
+PYTHONPATH=src python3 -m eleph setup-server
+```
+
+Print the BLE UUID contract without advertising:
+
+```bash
+PYTHONPATH=src python3 -m eleph setup-server --print-only
+```
 
 ## Motion Events And Sessions
 

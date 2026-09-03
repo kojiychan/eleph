@@ -20,7 +20,9 @@ final class SettingsViewModel: ObservableObject {
         }
     }
     @Published var isSavingProfile = false
-    @Published var validationMessage: String?
+    @Published var alertValidationMessage: String?
+    @Published var accountValidationMessage: String?
+    @Published var loadErrorMessage: String?
 
     private let services: AppServiceContainer
 
@@ -49,21 +51,21 @@ final class SettingsViewModel: ObservableObject {
                 phone = Self.formatPhoneNumber(profile.phone)
             }
         } catch {
-            validationMessage = Formatters.friendlyError(error.localizedDescription)
+            loadErrorMessage = Formatters.friendlyError(error.localizedDescription)
         }
     }
 
     func savePreferences() async {
         guard preferences.isValid else {
-            validationMessage = "Critical alert must be greater than caution alert."
+            alertValidationMessage = "Critical alert must be greater than caution alert."
             return
         }
 
         do {
             try await services.alertRepository.savePreferences(preferences)
-            validationMessage = nil
+            alertValidationMessage = nil
         } catch {
-            validationMessage = Formatters.friendlyError(error.localizedDescription)
+            alertValidationMessage = Formatters.friendlyError(error.localizedDescription)
         }
     }
 
@@ -72,7 +74,7 @@ final class SettingsViewModel: ObservableObject {
               !lastName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty,
               email.contains("@"),
               Self.phoneDigits(phone).count == 10 else {
-            validationMessage = "Enter a valid name, email, and phone number."
+            accountValidationMessage = "Enter a valid name, email, and phone number."
             return
         }
 
@@ -87,9 +89,9 @@ final class SettingsViewModel: ObservableObject {
                     phone: Self.phoneDigits(phone)
                 )
             )
-            validationMessage = nil
+            accountValidationMessage = nil
         } catch {
-            validationMessage = Formatters.friendlyError(error.localizedDescription)
+            accountValidationMessage = Formatters.friendlyError(error.localizedDescription)
         }
     }
 
