@@ -126,6 +126,90 @@ test("admin health reports missing Supabase env before table checks", async () =
   assert.equal(body.tables.devices.reason, "missing Supabase URL or service role key");
 });
 
+test("admin API creates QR when Supabase minimal insert returns an empty body", async () => {
+  const originalFetch = globalThis.fetch;
+  const originalEnv = { ...process.env };
+  const calls = [];
+
+  process.env.SUPABASE_URL = "https://example.supabase.co";
+  process.env.SUPABASE_SERVICE_ROLE_KEY = "service-role-key";
+  process.env.CLAIM_TOKEN_PEPPER = "test-pepper";
+  process.env.DEVICE_QR_BASE_URL = "https://eleph.app";
+
+  globalThis.fetch = async (url, init = {}) => {
+    calls.push({ url: String(url), init });
+
+    if (String(url).includes("select=display_name")) {
+      return jsonFetchResponse([]);
+    }
+
+    if (init.method === "POST" && String(url).includes("/rest/v1/devices")) {
+      return jsonFetchResponse([
+        {
+          device_id: "eleph-test01",
+          display_name: "Bathroom Monitor",
+          model: "eleph-zero2w-c4001",
+          created_at: "2026-09-10T00:00:00.000Z",
+        },
+      ]);
+    }
+
+    if (init.method === "POST" && String(url).includes("/rest/v1/device_claim_tokens")) {
+      return textFetchResponse("");
+    }
+
+    throw new Error(`Unexpected fetch ${url}`);
+  };
+
+  try {
+    const response = createMockResponse();
+    await handler(
+      {
+        method: "POST",
+        headers: {
+          authorization: `Basic ${Buffer.from("kojiychan:Test123").toString("base64")}`,
+        },
+        [Symbol.asyncIterator]: async function* () {
+          yield Buffer.from(
+            JSON.stringify({
+              display_name: "Bathroom Monitor",
+              model: "eleph-zero2w-c4001",
+            }),
+          );
+        },
+      },
+      response,
+    );
+
+    const body = JSON.parse(response.body);
+    assert.equal(response.statusCode, 201);
+    assert.equal(body.device.display_name, "Bathroom Monitor");
+    assert.match(body.qr_url, /device_id=/);
+    assert.match(body.qr_url, /display_name=Bathroom\+Monitor/);
+    assert.match(body.qr_url, /claim_token=/);
+    assert.equal(calls.some((call) => call.url.includes("device_claim_tokens")), true);
+  } finally {
+    globalThis.fetch = originalFetch;
+    process.env = originalEnv;
+  }
+});
+
+function jsonFetchResponse(body, status = 200) {
+  return {
+    ok: status >= 200 && status < 300,
+    status,
+    text: async () => JSON.stringify(body),
+  };
+}
+
+function textFetchResponse(body, status = 201) {
+  return {
+    ok: status >= 200 && status < 300,
+    status,
+    text: async () => body,
+  };
+}
+
 function createMockResponse() {
   const response = new EventEmitter();
   response.headers = {};

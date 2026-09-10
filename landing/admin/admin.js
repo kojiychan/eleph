@@ -297,9 +297,6 @@ form.addEventListener("submit", async (event) => {
       body: JSON.stringify({
         display_name: value(formData, "display_name"),
         model: value(formData, "model"),
-        hardware_serial: value(formData, "hardware_serial"),
-        batch_id: value(formData, "batch_id"),
-        notes: value(formData, "notes"),
       }),
     });
     const result = await readJsonResponse(response);

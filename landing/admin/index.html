@@ -93,31 +93,16 @@
           <div>
             <p class="eyebrow">One-time QR</p>
             <h2 id="create-device-title">Create device</h2>
-            <p class="admin-copy">The QR assigns the device name, device ID, and claim token. It does not include Wi-Fi.</p>
+            <p class="admin-copy">Enter the name that should be assigned to the Pi when the app scans this QR code.</p>
           </div>
 
           <form class="admin-form" id="device-form">
-            <div class="field-grid">
-              <div class="field">
+            <div class="field-grid admin-name-grid">
+              <div class="field field-wide">
                 <label for="display-name">Device name</label>
                 <input id="display-name" name="display_name" type="text" value="Device 1" required />
               </div>
-              <div class="field">
-                <label for="model">Model</label>
-                <input id="model" name="model" type="text" value="eleph-zero2w-c4001" required />
-              </div>
-              <div class="field">
-                <label for="hardware-serial">Hardware serial</label>
-                <input id="hardware-serial" name="hardware_serial" type="text" />
-              </div>
-              <div class="field">
-                <label for="batch-id">Batch ID</label>
-                <input id="batch-id" name="batch_id" type="text" />
-              </div>
-              <div class="field field-wide">
-                <label for="notes">Notes</label>
-                <textarea id="notes" name="notes" rows="3"></textarea>
-              </div>
+              <input name="model" type="hidden" value="eleph-zero2w-c4001" />
             </div>
 
             <div class="form-submit-row">

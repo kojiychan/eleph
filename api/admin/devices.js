@@ -59,7 +59,12 @@ const supabaseFetch = async (path, init = {}) => {
     return null;
   }
 
-  return response.json();
+  const text = await response.text();
+  if (!text) {
+    return null;
+  }
+
+  return JSON.parse(text);
 };
 
 const fetchExistingDeviceNames = () =>
