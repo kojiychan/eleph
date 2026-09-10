@@ -90,6 +90,21 @@ test("admin API rejects unsupported methods without an admin key or feature flag
   assert.equal(JSON.parse(response.body).error, "Method not allowed");
 });
 
+test("admin API requires login for device reads", async () => {
+  const response = createMockResponse();
+  await handler(
+    {
+      method: "GET",
+      headers: {},
+    },
+    response,
+  );
+
+  assert.equal(response.statusCode, 401);
+  assert.equal(response.headers["www-authenticate"], 'Basic realm="Eleph Admin"');
+  assert.equal(JSON.parse(response.body).error, "Admin login required");
+});
+
 function createMockResponse() {
   const response = new EventEmitter();
   response.headers = {};

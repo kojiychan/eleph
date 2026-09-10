@@ -1,6 +1,13 @@
 const form = document.querySelector("#devices-form");
 const statusEl = document.querySelector("#devices-status");
 const devicesBody = document.querySelector("#devices-body");
+const SESSION_KEY = "eleph.admin.authorization";
+
+const getAuthorization = () => sessionStorage.getItem(SESSION_KEY) || "";
+
+if (!getAuthorization()) {
+  window.location.assign("/admin/");
+}
 
 const setStatus = (message, tone = "neutral") => {
   statusEl.textContent = message;
@@ -73,7 +80,11 @@ form.addEventListener("submit", async (event) => {
   setStatus("Loading devices...", "neutral");
 
   try {
-    const response = await fetch("/api/admin/devices");
+    const response = await fetch("/api/admin/devices", {
+      headers: {
+        Authorization: getAuthorization(),
+      },
+    });
     const result = await readJsonResponse(response);
 
     if (!response.ok) {

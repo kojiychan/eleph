@@ -113,6 +113,7 @@ SUPABASE_DB_URL='postgresql://...' python scripts/create_beta_signups_table.py
 Admin device provisioning is available at:
 
 ```text
+/admin/
 /admin/devices/new/
 /admin/devices/
 ```
@@ -132,6 +133,8 @@ SUPABASE_URL
 SUPABASE_SERVICE_ROLE_KEY
 CLAIM_TOKEN_PEPPER
 DEVICE_QR_BASE_URL=https://eleph.app
+ADMIN_USERNAME=kojiychan
+ADMIN_PASSWORD=Test123
 ```
 
 No admin key or feature flag is required while this private tool is in early manufacturing use.

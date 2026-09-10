@@ -7,9 +7,16 @@ const downloadPngButton = document.querySelector("#download-png");
 const downloadSvgButton = document.querySelector("#download-svg");
 const printButton = document.querySelector("#print-label");
 const displayNameInput = document.querySelector("#display-name");
+const SESSION_KEY = "eleph.admin.authorization";
 
 let latestResult = null;
 let displayNameEdited = false;
+
+const getAuthorization = () => sessionStorage.getItem(SESSION_KEY) || "";
+
+if (!getAuthorization()) {
+  window.location.assign("/admin/");
+}
 
 const setStatus = (message, tone = "neutral") => {
   statusEl.textContent = message;
@@ -82,7 +89,11 @@ const refreshNextDisplayName = async () => {
   }
 
   try {
-    const response = await fetch("/api/admin/devices");
+    const response = await fetch("/api/admin/devices", {
+      headers: {
+        Authorization: getAuthorization(),
+      },
+    });
     const result = await readJsonResponse(response);
 
     if (!response.ok) {
@@ -115,6 +126,7 @@ form.addEventListener("submit", async (event) => {
     const response = await fetch("/api/admin/devices", {
       method: "POST",
       headers: {
+        Authorization: getAuthorization(),
         "Content-Type": "application/json",
       },
       body: JSON.stringify({

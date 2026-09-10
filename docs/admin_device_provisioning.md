@@ -3,6 +3,7 @@
 Private manufacturing routes:
 
 ```text
+/admin/
 /admin/devices/new/
 /admin/devices/
 ```
@@ -11,7 +12,7 @@ The new-device route creates a device record, generates a one-time plaintext cla
 stores only a SHA-256 hash in Supabase, and renders a QR code containing:
 
 ```text
-https://eleph.app/device?device_id=...&token=...
+https://eleph.app/device?device_id=...&display_name=...&claim_token=...
 ```
 
 The QR code is not used to connect to the Raspberry Pi. It assigns identity to the Pi after
@@ -40,6 +41,8 @@ SUPABASE_URL
 SUPABASE_SERVICE_ROLE_KEY
 CLAIM_TOKEN_PEPPER
 DEVICE_QR_BASE_URL=https://eleph.app
+ADMIN_USERNAME=kojiychan
+ADMIN_PASSWORD=Test123
 ```
 
 `SUPABASE_SERVICE_ROLE_KEY` and `CLAIM_TOKEN_PEPPER` must never be exposed in browser config.

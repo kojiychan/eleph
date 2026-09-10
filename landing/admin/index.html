@@ -1,0 +1,137 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>admin.eleph | Eleph Admin</title>
+    <meta name="robots" content="noindex" />
+    <meta name="theme-color" content="#112943" />
+    <link rel="icon" href="/assets/eleph-logo.png" />
+    <link rel="stylesheet" href="/styles.css" />
+  </head>
+  <body class="admin-page">
+    <header class="legal-header">
+      <a class="brand" href="/" aria-label="Eleph home">
+        <img class="brand-logo" src="/assets/eleph-logo.png" alt="" />
+        <span>admin.eleph</span>
+      </a>
+      <button class="header-action header-button" type="button" id="admin-logout" hidden>Log out</button>
+    </header>
+
+    <main class="admin-main">
+      <section class="admin-panel admin-login-panel" id="admin-login-panel" aria-labelledby="login-title">
+        <div>
+          <p class="eyebrow">Private controls</p>
+          <h1 id="login-title">Admin login</h1>
+          <p class="admin-copy">Sign in to create QR labels and track Eleph devices.</p>
+        </div>
+
+        <form class="admin-form" id="admin-login-form">
+          <div class="field-grid">
+            <div class="field field-wide">
+              <label for="admin-username">Username</label>
+              <input id="admin-username" name="username" type="text" autocomplete="username" required />
+            </div>
+            <div class="field field-wide">
+              <label for="admin-password">Password</label>
+              <input id="admin-password" name="password" type="password" autocomplete="current-password" required />
+            </div>
+          </div>
+          <div class="form-submit-row">
+            <button type="submit">Log in</button>
+            <p class="form-status" id="admin-login-status" role="status" aria-live="polite"></p>
+          </div>
+        </form>
+      </section>
+
+      <div id="admin-dashboard" hidden>
+        <section class="admin-panel" aria-labelledby="devices-title">
+          <div>
+            <p class="eyebrow">Devices</p>
+            <h1 id="devices-title">Device tracker</h1>
+            <p class="admin-copy">Track provisioned devices and create one-time QR labels for new monitors.</p>
+          </div>
+          <div class="admin-toolbar">
+            <button type="button" id="refresh-devices">Refresh devices</button>
+            <button type="button" id="show-create-device">Create new</button>
+            <p class="form-status" id="devices-status" role="status" aria-live="polite"></p>
+          </div>
+        </section>
+
+        <section class="admin-result" id="create-device-panel" hidden aria-labelledby="create-device-title">
+          <div>
+            <p class="eyebrow">One-time QR</p>
+            <h2 id="create-device-title">Create device</h2>
+            <p class="admin-copy">The QR assigns the device name, device ID, and claim token. It does not include Wi-Fi.</p>
+          </div>
+
+          <form class="admin-form" id="device-form">
+            <div class="field-grid">
+              <div class="field">
+                <label for="display-name">Device name</label>
+                <input id="display-name" name="display_name" type="text" value="Device 1" required />
+              </div>
+              <div class="field">
+                <label for="model">Model</label>
+                <input id="model" name="model" type="text" value="eleph-zero2w-c4001" required />
+              </div>
+              <div class="field">
+                <label for="hardware-serial">Hardware serial</label>
+                <input id="hardware-serial" name="hardware_serial" type="text" />
+              </div>
+              <div class="field">
+                <label for="batch-id">Batch ID</label>
+                <input id="batch-id" name="batch_id" type="text" />
+              </div>
+              <div class="field field-wide">
+                <label for="notes">Notes</label>
+                <textarea id="notes" name="notes" rows="3"></textarea>
+              </div>
+            </div>
+
+            <div class="form-submit-row">
+              <button type="submit">Create QR code</button>
+              <p class="form-status" id="device-form-status" role="status" aria-live="polite"></p>
+            </div>
+          </form>
+
+          <div class="qr-layout admin-qr-result" id="device-result" hidden>
+            <div class="qr-frame" id="qr-frame"></div>
+            <div>
+              <p class="token-warning">Claim token is only shown once. Print or download this label now.</p>
+              <dl class="device-details" id="device-details"></dl>
+              <div class="admin-actions">
+                <button type="button" id="download-png">Download PNG</button>
+                <button type="button" id="download-svg">Download SVG</button>
+                <button type="button" id="print-label">Print label</button>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section class="admin-table-wrap" aria-label="Devices">
+          <table class="admin-table">
+            <thead>
+              <tr>
+                <th>Device ID</th>
+                <th>Name</th>
+                <th>Model</th>
+                <th>Status</th>
+                <th>Last seen</th>
+                <th>Created</th>
+                <th>Claim used</th>
+              </tr>
+            </thead>
+            <tbody id="devices-body">
+              <tr>
+                <td colspan="7">Log in to load devices.</td>
+              </tr>
+            </tbody>
+          </table>
+        </section>
+      </div>
+    </main>
+
+    <script type="module" src="/admin/admin.js"></script>
+  </body>
+</html>

@@ -29,6 +29,45 @@ const readJsonBody = async (request) => {
   return JSON.parse(Buffer.concat(chunks).toString("utf8"));
 };
 
+const getAdminCredentials = () => ({
+  username: process.env.ADMIN_USERNAME ?? "kojiychan",
+  password: process.env.ADMIN_PASSWORD ?? "Test123",
+});
+
+const parseBasicAuth = (header = "") => {
+  const [scheme, encoded] = header.split(" ");
+  if (scheme !== "Basic" || !encoded) {
+    return null;
+  }
+
+  const decoded = Buffer.from(encoded, "base64").toString("utf8");
+  const separatorIndex = decoded.indexOf(":");
+  if (separatorIndex === -1) {
+    return null;
+  }
+
+  return {
+    username: decoded.slice(0, separatorIndex),
+    password: decoded.slice(separatorIndex + 1),
+  };
+};
+
+const isAuthorizedAdmin = (request) => {
+  const credentials = getAdminCredentials();
+  const auth = parseBasicAuth(request.headers?.authorization);
+  return auth?.username === credentials.username && auth?.password === credentials.password;
+};
+
+const requireAdmin = (request, response) => {
+  if (isAuthorizedAdmin(request)) {
+    return true;
+  }
+
+  response.setHeader("WWW-Authenticate", 'Basic realm="Eleph Admin"');
+  json(response, 401, { error: "Admin login required" });
+  return false;
+};
+
 const getSupabaseConfig = () => {
   const supabaseUrl = process.env.SUPABASE_URL ?? process.env.NEXT_PUBLIC_SUPABASE_URL;
   const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
@@ -92,6 +131,16 @@ const isUniqueViolation = (error) =>
 
 export default async function handler(request, response) {
   try {
+    if (!["GET", "POST"].includes(request.method)) {
+      response.setHeader("Allow", "GET, POST");
+      json(response, 405, { error: "Method not allowed" });
+      return;
+    }
+
+    if (!requireAdmin(request, response)) {
+      return;
+    }
+
     if (request.method === "GET") {
       const [devices, existingDeviceNames] = await Promise.all([
         supabaseFetch(
@@ -103,12 +152,6 @@ export default async function handler(request, response) {
         devices,
         next_display_name: getNextDeviceDisplayName(existingDeviceNames),
       });
-      return;
-    }
-
-    if (request.method !== "POST") {
-      response.setHeader("Allow", "GET, POST");
-      json(response, 405, { error: "Method not allowed" });
       return;
     }
 
