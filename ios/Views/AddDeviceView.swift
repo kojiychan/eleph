@@ -41,6 +41,14 @@ struct AddDeviceView: View {
                     }
                 }
             }
+            .sheet(isPresented: $viewModel.isShowingQRCodeScanner) {
+                QRCodeScannerView(
+                    onCodeScanned: viewModel.handleScannedQRCode,
+                    onCancel: {
+                        viewModel.isShowingQRCodeScanner = false
+                    }
+                )
+            }
             .task {
                 if viewModel.state == .idle {
                     viewModel.start()
@@ -54,14 +62,14 @@ struct AddDeviceView: View {
         switch viewModel.state {
         case .idle, .intro:
             hero(
-                symbol: "sensor.tag.radiowaves.forward.fill",
+                symbol: "qrcode.viewfinder",
                 title: "Set up your Eleph monitor",
-                subtitle: "First we connect to the nearby monitor over Bluetooth. Then the QR code assigns the monitor identity, and Wi-Fi is sent securely to the connected monitor."
+                subtitle: "First scan the monitor QR code. Then Eleph finds the nearby Pi over Bluetooth and sends identity plus Wi-Fi setup to the connected monitor."
             )
             setupSteps([
-                "Find nearby Eleph monitor",
-                "Connect over Bluetooth",
                 "Scan the device QR code",
+                "Find nearby Eleph Setup monitor",
+                "Connect over Bluetooth",
                 "Send Wi-Fi setup",
                 "Wait for cloud heartbeat"
             ])
@@ -71,7 +79,7 @@ struct AddDeviceView: View {
             progressCard(title: "Scanning", detail: "Looking for Eleph Setup or Eleph Monitor", symbol: "antenna.radiowaves.left.and.right")
 
         case .bluetoothDeviceFound:
-            hero(symbol: "list.bullet.rectangle", title: "Choose your monitor", subtitle: "Select the nearby Eleph monitor before scanning the QR code.")
+            hero(symbol: "list.bullet.rectangle", title: "Choose your monitor", subtitle: "Select the nearby Eleph monitor that will receive this QR identity.")
             deviceList
 
         case .bluetoothConnecting:
@@ -79,19 +87,19 @@ struct AddDeviceView: View {
             progressCard(title: "Bluetooth connecting", detail: viewModel.selectedSetupDevice?.name ?? "Eleph Monitor", symbol: "link")
 
         case .bluetoothConnected:
-            hero(symbol: "checkmark.circle.fill", title: "Bluetooth connected", subtitle: "Now scan the QR code on the monitor or packaging. The QR code assigns identity to this connected monitor.")
+            hero(symbol: "checkmark.circle.fill", title: "Bluetooth connected", subtitle: "The app will send the scanned identity and Wi-Fi credentials over this Bluetooth connection.")
             statusRows([
                 ("Phone connected to monitor", "checkmark.circle.fill", Color.green),
                 ("Ready for provisioning", "bolt.badge.checkmark.fill", Color.blue),
-                ("QR identity required next", "qrcode.viewfinder", Color.secondary)
+                ("QR identity ready", "qrcode", Color.green)
             ])
 
         case .qrScanning:
-            hero(symbol: "qrcode.viewfinder", title: "Scan QR code", subtitle: "The QR code confirms the device ID and claim token. It does not connect to the monitor.")
+            hero(symbol: "qrcode.viewfinder", title: "Scan QR code", subtitle: "The QR code provides device ID, display name, and claim token only. Wi-Fi details stay in the app until Bluetooth setup.")
             qrInput
 
         case .qrValidated:
-            hero(symbol: "checkmark.seal.fill", title: "QR code validated", subtitle: "This identity will be sent to the monitor over the active Bluetooth connection.")
+            hero(symbol: "checkmark.seal.fill", title: "QR code validated", subtitle: "Next, connect to the nearby Eleph Setup Bluetooth device.")
             identityCard
 
         case .confirmingDeviceName:
@@ -195,12 +203,20 @@ struct AddDeviceView: View {
 
     private var qrInput: some View {
         VStack(alignment: .leading, spacing: 12) {
+            Button {
+                viewModel.beginCameraQRScan()
+            } label: {
+                Label("Open Camera", systemImage: "camera.viewfinder")
+                    .frame(maxWidth: .infinity)
+            }
+            .buttonStyle(.borderedProminent)
+            .controlSize(.large)
+
             TextField("Eleph QR link", text: $viewModel.qrCodeText, axis: .vertical)
                 .textFieldStyle(.roundedBorder)
-                .textInputAutocapitalization(.never)
-                .autocorrectionDisabled()
+                .plainTextInputTraits()
                 .focused($focusedField, equals: .qrCode)
-            Text("Camera scanning will plug into this step later. For now, paste or use the mock QR payload.")
+            Text("The QR payload should contain device_id, display_name, and claim_token only.")
                 .font(.footnote)
                 .foregroundStyle(.secondary)
         }
@@ -441,14 +457,14 @@ struct AddDeviceView: View {
     private var primaryButtonTitle: String {
         switch viewModel.state {
         case .idle, .intro:
-            "Find Monitor"
-        case .bluetoothDeviceFound:
-            "Connect"
-        case .bluetoothConnected:
             "Scan QR Code"
         case .qrScanning:
             "Validate QR Code"
         case .qrValidated:
+            "Find Monitor"
+        case .bluetoothDeviceFound:
+            "Connect"
+        case .bluetoothConnected:
             "Confirm Identity"
         case .confirmingDeviceName:
             "Continue"

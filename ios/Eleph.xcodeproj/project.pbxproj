@@ -56,6 +56,7 @@
 		9A000000000000000000006E /* ViewModels/AddDeviceViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9A0000000000000000000071 /* ViewModels/AddDeviceViewModel.swift */; };
 		9A000000000000000000006F /* Views/AddDeviceView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9A0000000000000000000072 /* Views/AddDeviceView.swift */; };
 		9A0000000000000000000073 /* Services/CoreBluetoothElephSetupService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9A0000000000000000000074 /* Services/CoreBluetoothElephSetupService.swift */; };
+		9A0000000000000000000075 /* Components/QRCodeScannerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9A0000000000000000000076 /* Components/QRCodeScannerView.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -110,6 +111,7 @@
 		9A0000000000000000000071 /* ViewModels/AddDeviceViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ViewModels/AddDeviceViewModel.swift; sourceTree = "<group>"; };
 		9A0000000000000000000072 /* Views/AddDeviceView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Views/AddDeviceView.swift; sourceTree = "<group>"; };
 		9A0000000000000000000074 /* Services/CoreBluetoothElephSetupService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Services/CoreBluetoothElephSetupService.swift; sourceTree = "<group>"; };
+		9A0000000000000000000076 /* Components/QRCodeScannerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Components/QRCodeScannerView.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -139,6 +141,7 @@
 				9A000000000000000000001A /* Components/MetricCard.swift */,
 				9A000000000000000000001B /* Components/MotionEventRow.swift */,
 				9A000000000000000000001C /* Components/OnboardingProgressIndicator.swift */,
+				9A0000000000000000000076 /* Components/QRCodeScannerView.swift */,
 				9A000000000000000000001D /* Components/SettingsRow.swift */,
 				9A000000000000000000001E /* Components/StatusBadge.swift */,
 				9A000000000000000000001F /* Components/StatusCard.swift */,
@@ -287,6 +290,7 @@
 				9A0000000000000000000048 /* Components/MetricCard.swift in Sources */,
 				9A0000000000000000000049 /* Components/MotionEventRow.swift in Sources */,
 				9A000000000000000000004A /* Components/OnboardingProgressIndicator.swift in Sources */,
+				9A0000000000000000000075 /* Components/QRCodeScannerView.swift in Sources */,
 				9A000000000000000000004B /* Components/SettingsRow.swift in Sources */,
 				9A000000000000000000004C /* Components/StatusBadge.swift in Sources */,
 				9A000000000000000000004D /* Components/StatusCard.swift in Sources */,

@@ -151,7 +151,8 @@ export default async function handler(request, response) {
     const qr_url = buildQrUrl({
       appBaseUrl: process.env.DEVICE_QR_BASE_URL ?? "https://eleph.app",
       deviceId,
-      token: claimToken,
+      displayName,
+      claimToken,
     });
     const qr = await buildQrImages(qr_url);
 

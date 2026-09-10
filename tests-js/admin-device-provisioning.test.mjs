@@ -29,17 +29,21 @@ test("claim token is generated and not equal to its stored hash", () => {
   assert.notEqual(tokenHash, token);
 });
 
-test("QR URL contains device_id and plaintext one-time token", () => {
+test("QR URL contains identity fields and no Wi-Fi data", () => {
   const qrUrl = buildQrUrl({
     deviceId: "eleph-9k2m4q",
-    token: "plain-token",
+    displayName: "Bathroom Monitor",
+    claimToken: "plain-token",
   });
   const parsed = new URL(qrUrl);
 
   assert.equal(parsed.origin, "https://eleph.app");
   assert.equal(parsed.pathname, "/device");
   assert.equal(parsed.searchParams.get("device_id"), "eleph-9k2m4q");
-  assert.equal(parsed.searchParams.get("token"), "plain-token");
+  assert.equal(parsed.searchParams.get("display_name"), "Bathroom Monitor");
+  assert.equal(parsed.searchParams.get("claim_token"), "plain-token");
+  assert.equal(parsed.searchParams.has("wifi_ssid"), false);
+  assert.equal(parsed.searchParams.has("wifi_password"), false);
 });
 
 test("device input gets required defaults", () => {

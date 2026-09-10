@@ -35,4 +35,15 @@ extension View {
         self
         #endif
     }
+
+    @ViewBuilder
+    func plainTextInputTraits() -> some View {
+        #if os(iOS)
+        self
+            .textInputAutocapitalization(.never)
+            .autocorrectionDisabled()
+        #else
+        self
+        #endif
+    }
 }

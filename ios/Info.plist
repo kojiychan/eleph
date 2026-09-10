@@ -35,6 +35,8 @@
 	<string>public.app-category.healthcare-fitness</string>
 	<key>NSBluetoothAlwaysUsageDescription</key>
 	<string>Eleph uses Bluetooth to connect to a nearby monitor during setup and send Wi-Fi provisioning details.</string>
+	<key>NSCameraUsageDescription</key>
+	<string>Eleph uses the camera to scan the monitor QR code during setup.</string>
 	<key>UIApplicationSceneManifest</key>
 	<dict>
         <key>UIApplicationSupportsMultipleScenes</key>

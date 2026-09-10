@@ -9,8 +9,8 @@ struct AppRootView: View {
             if rootViewModel.onboardingCompleted {
                 MainTabView(services: services)
             } else {
-                OnboardingView(
-                    viewModel: OnboardingViewModel(services: services),
+                AddDeviceView(
+                    viewModel: AddDeviceViewModel(services: services),
                     onComplete: rootViewModel.completeOnboarding
                 )
             }

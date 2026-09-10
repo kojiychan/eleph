@@ -122,7 +122,7 @@ The admin API creates a device, generates a one-time plaintext claim token, stor
 SHA-256 token hash in Supabase, and returns a QR code with:
 
 ```text
-https://eleph.app/device?device_id=...&token=...
+https://eleph.app/device?device_id=...&display_name=...&claim_token=...
 ```
 
 Required Vercel environment variables for admin provisioning:

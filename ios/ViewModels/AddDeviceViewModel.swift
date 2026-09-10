@@ -8,7 +8,8 @@ final class AddDeviceViewModel: ObservableObject {
     @Published private(set) var setupStatus: SetupStatus = .unknown
     @Published private(set) var provisioningStatus: ProvisioningStatus = .idle
     @Published private(set) var qrPayload: DeviceQRCodePayload?
-    @Published var qrCodeText = "eleph://device?device_id=bathroom-monitor-001&name=Bathroom%20Monitor&token=abc123"
+    @Published var qrCodeText = "eleph://device?device_id=bathroom-monitor-001&display_name=Bathroom%20Monitor&claim_token=abc123"
+    @Published var isShowingQRCodeScanner = false
     @Published var displayName = "Bathroom Monitor"
     @Published var wifiSSID = ""
     @Published var wifiPassword = ""
@@ -53,7 +54,7 @@ final class AddDeviceViewModel: ObservableObject {
 
     var canContinue: Bool {
         switch state {
-        case .idle, .intro, .bluetoothConnected, .qrValidated, .monitorReady, .notificationSettings, .verifyEmail, .success:
+        case .idle, .intro, .qrScanning, .qrValidated, .bluetoothConnected, .monitorReady, .notificationSettings, .verifyEmail, .success:
             true
         case .bluetoothDeviceFound:
             selectedSetupDevice != nil
@@ -69,7 +70,7 @@ final class AddDeviceViewModel: ObservableObject {
             isAccountValid && !isSubmitting
         case .failure:
             true
-        case .bluetoothScanning, .bluetoothConnecting, .qrScanning, .sendingProvisioningPayload, .waitingForHeartbeat, .claimingDevice:
+        case .bluetoothScanning, .bluetoothConnecting, .sendingProvisioningPayload, .waitingForHeartbeat, .claimingDevice:
             false
         }
     }
@@ -154,6 +155,16 @@ final class AddDeviceViewModel: ObservableObject {
 
     func beginQRScan() {
         state = .qrScanning
+    }
+
+    func beginCameraQRScan() {
+        isShowingQRCodeScanner = true
+    }
+
+    func handleScannedQRCode(_ value: String) {
+        isShowingQRCodeScanner = false
+        qrCodeText = value
+        validateQRCode()
     }
 
     func validateQRCode() {
@@ -300,14 +311,14 @@ final class AddDeviceViewModel: ObservableObject {
         case .idle:
             start()
         case .intro:
-            await scanForSetupDevices()
-        case .bluetoothDeviceFound:
-            await connectToSelectedDevice()
-        case .bluetoothConnected:
             beginQRScan()
         case .qrScanning:
             validateQRCode()
         case .qrValidated:
+            await scanForSetupDevices()
+        case .bluetoothDeviceFound:
+            await connectToSelectedDevice()
+        case .bluetoothConnected:
             state = .confirmingDeviceName
         case .confirmingDeviceName:
             confirmDeviceName()
@@ -411,12 +422,12 @@ indirect enum AddDeviceOnboardingState: Equatable {
 
     static let progressFlow: [AddDeviceOnboardingState] = [
         .intro,
+        .qrScanning,
+        .qrValidated,
         .bluetoothScanning,
         .bluetoothDeviceFound,
         .bluetoothConnecting,
         .bluetoothConnected,
-        .qrScanning,
-        .qrValidated,
         .confirmingDeviceName,
         .wifiEntry,
         .sendingProvisioningPayload,
@@ -443,9 +454,9 @@ indirect enum AddDeviceOnboardingState: Equatable {
     var retryFallback: AddDeviceOnboardingState {
         switch self {
         case .bluetoothScanning, .bluetoothDeviceFound, .bluetoothConnecting:
-            .intro
+            .qrValidated
         case .qrScanning, .qrValidated, .confirmingDeviceName:
-            .bluetoothConnected
+            .intro
         case .wifiEntry, .sendingProvisioningPayload:
             .wifiEntry
         case .waitingForHeartbeat, .claimingDevice:
