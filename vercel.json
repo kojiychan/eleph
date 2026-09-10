@@ -5,5 +5,19 @@
   "buildCommand": "npm run build",
   "outputDirectory": "dist",
   "cleanUrls": true,
-  "trailingSlash": false
+  "trailingSlash": false,
+  "rewrites": [
+    {
+      "source": "/admin",
+      "destination": "/admin/index.html"
+    },
+    {
+      "source": "/admin/devices",
+      "destination": "/admin/devices/index.html"
+    },
+    {
+      "source": "/admin/devices/new",
+      "destination": "/admin/devices/new.html"
+    }
+  ]
 }
