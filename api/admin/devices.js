@@ -8,12 +8,7 @@ import {
   hashClaimToken,
   sanitizeDeviceInput,
 } from "../../lib/admin/device-provisioning.mjs";
-
-const json = (response, status, body) => {
-  response.statusCode = status;
-  response.setHeader("Content-Type", "application/json");
-  response.end(JSON.stringify(body));
-};
+import { json, requireAdmin } from "../../lib/admin/auth.mjs";
 
 const readJsonBody = async (request) => {
   const chunks = [];
@@ -27,45 +22,6 @@ const readJsonBody = async (request) => {
   }
 
   return JSON.parse(Buffer.concat(chunks).toString("utf8"));
-};
-
-const getAdminCredentials = () => ({
-  username: process.env.ADMIN_USERNAME ?? "kojiychan",
-  password: process.env.ADMIN_PASSWORD ?? "Test123",
-});
-
-const parseBasicAuth = (header = "") => {
-  const [scheme, encoded] = header.split(" ");
-  if (scheme !== "Basic" || !encoded) {
-    return null;
-  }
-
-  const decoded = Buffer.from(encoded, "base64").toString("utf8");
-  const separatorIndex = decoded.indexOf(":");
-  if (separatorIndex === -1) {
-    return null;
-  }
-
-  return {
-    username: decoded.slice(0, separatorIndex),
-    password: decoded.slice(separatorIndex + 1),
-  };
-};
-
-const isAuthorizedAdmin = (request) => {
-  const credentials = getAdminCredentials();
-  const auth = parseBasicAuth(request.headers?.authorization);
-  return auth?.username === credentials.username && auth?.password === credentials.password;
-};
-
-const requireAdmin = (request, response) => {
-  if (isAuthorizedAdmin(request)) {
-    return true;
-  }
-
-  response.setHeader("WWW-Authenticate", 'Basic realm="Eleph Admin"');
-  json(response, 401, { error: "Admin login required" });
-  return false;
 };
 
 const getSupabaseConfig = () => {

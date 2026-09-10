@@ -12,6 +12,11 @@ const showCreateButton = document.querySelector("#show-create-device");
 const createPanel = document.querySelector("#create-device-panel");
 const devicesStatus = document.querySelector("#devices-status");
 const devicesBody = document.querySelector("#devices-body");
+const envSupabaseUrl = document.querySelector("#env-supabase-url");
+const envServiceKey = document.querySelector("#env-service-key");
+const envClaimPepper = document.querySelector("#env-claim-pepper");
+const tableDevices = document.querySelector("#table-devices");
+const tableStatusText = document.querySelector("#table-status-text");
 const form = document.querySelector("#device-form");
 const statusEl = document.querySelector("#device-form-status");
 const resultEl = document.querySelector("#device-result");
@@ -57,14 +62,20 @@ const adminFetch = (url, init = {}) =>
 
 const showDashboard = () => {
   loginPanel.hidden = true;
+  loginPanel.style.display = "none";
   dashboard.hidden = false;
+  dashboard.style.display = "";
   logoutButton.hidden = false;
+  logoutButton.style.display = "";
 };
 
 const showLogin = () => {
   loginPanel.hidden = false;
+  loginPanel.style.display = "";
   dashboard.hidden = true;
+  dashboard.style.display = "none";
   logoutButton.hidden = true;
+  logoutButton.style.display = "none";
 };
 
 const downloadDataUrl = (filename, dataUrl) => {
@@ -151,6 +162,57 @@ const renderDetails = ({ device, qr_url }) => {
   }
 };
 
+const setDot = (element, ok) => {
+  element.dataset.state = ok ? "ok" : "error";
+};
+
+const loadHealth = async () => {
+  setStatus(devicesStatus, "Checking Supabase connection...", "neutral");
+
+  try {
+    const response = await adminFetch("/api/admin/health");
+    const result = await readJsonResponse(response);
+
+    if (!response.ok) {
+      throw new Error(result.error || "Could not check Supabase connection");
+    }
+
+    setDot(envSupabaseUrl, result.env?.supabaseUrl);
+    setDot(envServiceKey, result.env?.supabaseServiceRoleKey);
+    setDot(envClaimPepper, result.env?.claimTokenPepper);
+    setDot(tableDevices, result.tables?.devices?.ok && result.tables?.deviceClaimTokens?.ok);
+
+    if (!result.env?.supabaseUrl || !result.env?.supabaseServiceRoleKey) {
+      tableStatusText.textContent = "Add Vercel env vars, then redeploy";
+      setStatus(devicesStatus, "Supabase env vars are missing in Vercel.", "error");
+      return false;
+    }
+
+    if (!result.env?.claimTokenPepper) {
+      tableStatusText.textContent = "CLAIM_TOKEN_PEPPER missing";
+      setStatus(devicesStatus, "Add CLAIM_TOKEN_PEPPER in Vercel, then redeploy.", "error");
+      return false;
+    }
+
+    if (!result.tables?.devices?.ok || !result.tables?.deviceClaimTokens?.ok) {
+      tableStatusText.textContent = "Run supabase/device_provisioning.sql";
+      setStatus(devicesStatus, "Supabase is connected, but provisioning tables are missing.", "error");
+      return false;
+    }
+
+    tableStatusText.textContent = "devices and device_claim_tokens reachable";
+    return true;
+  } catch (error) {
+    setDot(envSupabaseUrl, false);
+    setDot(envServiceKey, false);
+    setDot(envClaimPepper, false);
+    setDot(tableDevices, false);
+    tableStatusText.textContent = "Could not run diagnostics";
+    setStatus(devicesStatus, error.message, "error");
+    return false;
+  }
+};
+
 const loadDevices = async () => {
   refreshButton.disabled = true;
   setStatus(devicesStatus, "Loading devices...", "neutral");
@@ -197,7 +259,9 @@ loginForm.addEventListener("submit", async (event) => {
   loginForm.reset();
   setStatus(loginStatus, "", "neutral");
   showDashboard();
-  await loadDevices();
+  if (await loadHealth()) {
+    await loadDevices();
+  }
 });
 
 logoutButton.addEventListener("click", () => {
@@ -282,7 +346,9 @@ printButton.addEventListener("click", () => {
 
 if (getAuthorization()) {
   showDashboard();
-  await loadDevices();
+  if (await loadHealth()) {
+    await loadDevices();
+  }
 } else {
   showLogin();
 }

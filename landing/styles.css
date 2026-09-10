@@ -592,6 +592,10 @@ h3 {
   padding: clamp(34px, 6vw, 76px) 0;
 }
 
+.admin-page [hidden] {
+  display: none !important;
+}
+
 .header-button {
   border: 0;
   cursor: pointer;
@@ -698,6 +702,59 @@ h3 {
 
 .admin-toolbar button:first-child {
   background: #d9ebe6;
+}
+
+.admin-status-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 14px;
+  margin-bottom: 24px;
+}
+
+.admin-status-card {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  min-height: 104px;
+  padding: 18px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--white);
+  box-shadow: 0 10px 26px rgba(17, 41, 67, 0.06);
+}
+
+.admin-status-card strong,
+.admin-status-card span {
+  display: block;
+}
+
+.admin-status-card strong {
+  margin-bottom: 5px;
+  color: var(--ink);
+  font-size: 0.9rem;
+}
+
+.admin-status-card span {
+  color: var(--muted);
+  font-size: 0.86rem;
+  line-height: 1.36;
+}
+
+.admin-status-dot {
+  width: 13px;
+  height: 13px;
+  margin-top: 4px;
+  flex: 0 0 auto;
+  border-radius: 50%;
+  background: #bcc9c6;
+}
+
+.admin-status-dot[data-state="ok"] {
+  background: #1f7666;
+}
+
+.admin-status-dot[data-state="error"] {
+  background: #a23d2b;
 }
 
 .admin-result {
@@ -831,7 +888,8 @@ h3 {
   .privacy-layout,
   .beta-layout,
   .admin-panel,
-  .qr-layout {
+  .qr-layout,
+  .admin-status-grid {
     grid-template-columns: 1fr;
   }
 

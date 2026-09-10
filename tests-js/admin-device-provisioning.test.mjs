@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { EventEmitter } from "node:events";
 import test from "node:test";
 
+import healthHandler from "../api/admin/health.js";
 import handler from "../api/admin/devices.js";
 import {
   buildQrUrl,
@@ -103,6 +104,26 @@ test("admin API requires login for device reads", async () => {
   assert.equal(response.statusCode, 401);
   assert.equal(response.headers["www-authenticate"], 'Basic realm="Eleph Admin"');
   assert.equal(JSON.parse(response.body).error, "Admin login required");
+});
+
+test("admin health reports missing Supabase env before table checks", async () => {
+  const response = createMockResponse();
+  await healthHandler(
+    {
+      method: "GET",
+      headers: {
+        authorization: `Basic ${Buffer.from("kojiychan:Test123").toString("base64")}`,
+      },
+    },
+    response,
+  );
+
+  const body = JSON.parse(response.body);
+  assert.equal(response.statusCode, 200);
+  assert.equal(body.ok, false);
+  assert.equal(body.env.supabaseUrl, false);
+  assert.equal(body.env.supabaseServiceRoleKey, false);
+  assert.equal(body.tables.devices.reason, "missing Supabase URL or service role key");
 });
 
 function createMockResponse() {

@@ -45,6 +45,37 @@
       </section>
 
       <div id="admin-dashboard" hidden>
+        <section class="admin-status-grid" aria-label="Supabase status">
+          <article class="admin-status-card">
+            <span class="admin-status-dot" id="env-supabase-url"></span>
+            <div>
+              <strong>SUPABASE_URL</strong>
+              <span>Project URL available to Vercel Functions</span>
+            </div>
+          </article>
+          <article class="admin-status-card">
+            <span class="admin-status-dot" id="env-service-key"></span>
+            <div>
+              <strong>SUPABASE_SERVICE_ROLE_KEY</strong>
+              <span>Server-only key for admin device creation</span>
+            </div>
+          </article>
+          <article class="admin-status-card">
+            <span class="admin-status-dot" id="env-claim-pepper"></span>
+            <div>
+              <strong>CLAIM_TOKEN_PEPPER</strong>
+              <span>Secret used to hash one-time claim tokens</span>
+            </div>
+          </article>
+          <article class="admin-status-card">
+            <span class="admin-status-dot" id="table-devices"></span>
+            <div>
+              <strong>Supabase tables</strong>
+              <span id="table-status-text">Checking devices and claim tokens</span>
+            </div>
+          </article>
+        </section>
+
         <section class="admin-panel" aria-labelledby="devices-title">
           <div>
             <p class="eyebrow">Devices</p>
